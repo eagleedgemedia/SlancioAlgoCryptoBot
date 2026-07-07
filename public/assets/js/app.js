@@ -178,6 +178,51 @@ async function loadUserProfile() {
     // Set Bot Toggle State
     botToggle.checked = user.bot_enabled;
     updateBotStatusUI(user.bot_enabled);
+    
+    // Load Trades and Stats
+    loadTradeHistory();
+}
+
+async function loadTradeHistory() {
+    try {
+        const stats = await fetchAPI('/users/stats');
+        document.getElementById('stat-winrate').innerText = `${stats.win_rate}%`;
+        document.getElementById('stat-pnl').innerText = `$${stats.total_pnl.toFixed(2)}`;
+        if (stats.total_pnl < 0) {
+            document.getElementById('stat-pnl').className = "text-danger";
+        }
+        document.getElementById('stat-trades').innerText = stats.total_trades;
+        
+        const trades = await fetchAPI('/users/trades');
+        const tbody = document.getElementById('trades-tbody');
+        
+        if (!trades || trades.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No recent trades found. Ensure Bot is ON and API keys are saved.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        trades.forEach(t => {
+            const row = document.createElement('tr');
+            
+            const sideClass = t.side === 'buy' || t.side === 'long' ? 'text-green' : 'text-danger';
+            const statusBadge = t.status === 'closed' ? '<span class="badge badge-outline">Closed</span>' : '<span class="badge badge-green">Open</span>';
+            const pnlStr = t.pnl_usdt ? `$${t.pnl_usdt.toFixed(2)}` : '-';
+            const pnlClass = t.pnl_usdt && t.pnl_usdt > 0 ? 'text-green' : (t.pnl_usdt && t.pnl_usdt < 0 ? 'text-danger' : '');
+            
+            row.innerHTML = `
+                <td><strong>${t.symbol}</strong></td>
+                <td class="${sideClass}">${t.side.toUpperCase()}</td>
+                <td>$${t.entry_price.toFixed(2)}</td>
+                <td>${statusBadge}</td>
+                <td class="${pnlClass}"><strong>${pnlStr}</strong></td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch(e) {
+        console.error("Failed to load trade history:", e);
+    }
 }
 
 function updateBotStatusUI(isEnabled) {

@@ -142,15 +142,28 @@
                     </div>
                 </div>
 
-                <!-- Live Market Info (Mock) -->
-                <div class="glass-panel card">
-                    <div class="card-header">
-                        <h3><i class="fa-solid fa-bitcoin-sign text-orange"></i> Live Market</h3>
+                <!-- Trade Stats Cards -->
+                <div class="glass-panel card bento-span-1 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa-solid fa-chart-pie text-accent fa-2x mb-2"></i>
+                        <h4 class="text-muted">Win Rate</h4>
+                        <h2 id="stat-winrate">0%</h2>
                     </div>
-                    <div class="card-body market-info">
-                        <div class="market-pair">BTC/USD <span class="badge badge-green">Perp</span></div>
-                        <h2 class="market-price">$63,842.50</h2>
-                        <div class="market-trend up"><i class="fa-solid fa-arrow-trend-up"></i> +2.4% (24h)</div>
+                </div>
+                
+                <div class="glass-panel card bento-span-1 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa-solid fa-wallet text-green fa-2x mb-2"></i>
+                        <h4 class="text-muted">Total PnL</h4>
+                        <h2 id="stat-pnl" class="text-gradient">$0.00</h2>
+                    </div>
+                </div>
+                
+                <div class="glass-panel card bento-span-1 stat-card">
+                    <div class="card-body text-center">
+                        <i class="fa-solid fa-bolt text-orange fa-2x mb-2"></i>
+                        <h4 class="text-muted">Total Trades</h4>
+                        <h2 id="stat-trades">0</h2>
                     </div>
                 </div>
 

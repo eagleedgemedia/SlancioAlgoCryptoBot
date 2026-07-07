@@ -87,3 +87,55 @@ async def toggle_bot(
     await db.commit()
     
     return {"status": "success", "bot_enabled": current_user.bot_enabled}
+
+
+from database.models import TradeLog
+from sqlalchemy import func
+
+@router.get("/trades")
+async def get_trade_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Fetch user's trade history"""
+    stmt = select(TradeLog).where(TradeLog.user_id == current_user.id).order_by(TradeLog.opened_at.desc()).limit(50)
+    result = await db.execute(stmt)
+    trades = result.scalars().all()
+    
+    return [
+        {
+            "id": t.id,
+            "symbol": t.symbol,
+            "side": t.side,
+            "status": t.status,
+            "entry_price": t.entry_price,
+            "exit_price": t.exit_price,
+            "pnl_usdt": t.pnl_usdt,
+            "pnl_percent": t.pnl_percent,
+            "opened_at": t.opened_at,
+            "closed_at": t.closed_at
+        } for t in trades
+    ]
+
+
+@router.get("/stats")
+async def get_trade_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Fetch user's P&L and win rate"""
+    stmt = select(TradeLog).where(TradeLog.user_id == current_user.id, TradeLog.status == 'closed')
+    result = await db.execute(stmt)
+    trades = result.scalars().all()
+    
+    total_trades = len(trades)
+    winning_trades = len([t for t in trades if t.pnl_usdt and t.pnl_usdt > 0])
+    total_pnl = sum([t.pnl_usdt for t in trades if t.pnl_usdt])
+    
+    win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+    
+    return {
+        "total_trades": total_trades,
+        "win_rate": round(win_rate, 2),
+        "total_pnl": round(total_pnl, 2)
+    }
