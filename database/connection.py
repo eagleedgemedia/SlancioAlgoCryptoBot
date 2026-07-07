@@ -44,11 +44,12 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db_schema():
     """
     Initialize the database schema (creates all tables).
-    Used for SQLite testing and dev. For production Postgres, use Alembic.
+    Works for both SQLite (dev) and PostgreSQL (production Neon).
+    Safe to call on every startup — SQLAlchemy skips existing tables.
     """
     from database.models import Base
     
-    logger.info(f"Connecting to DB: {settings.database_url}")
+    logger.info(f"Connecting to DB: {settings.database_url[:40]}...")
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

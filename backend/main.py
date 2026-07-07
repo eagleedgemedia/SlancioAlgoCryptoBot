@@ -40,15 +40,10 @@ app.include_router(users_router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize DB on startup (useful for SQLite/Dev)"""
-    logger.info("Starting up FastAPI Backend...")
-    # For a production Postgres environment with Alembic, you would NOT run create_all here.
-    # However, since we are doing a seamless Render deployment where we might use SQLite for dev:
-    if "sqlite" in settings.database_url:
-        await init_db_schema()
-        
-    # Start the fully autonomous background scheduler!
-    start_scheduler()
+    """Initialize DB on startup — works for both SQLite (dev) and PostgreSQL (Neon)"""
+    logger.info("Starting up Slancio Crypto Algo Engine Backend...")
+    await init_db_schema()  # Safe for both SQLite and Postgres — skips existing tables
+    start_scheduler()  # Start the fully autonomous background scheduler!
 
 
 @app.get("/api/health")
