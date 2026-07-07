@@ -8,7 +8,7 @@ services:
       - key: TELEGRAM_BOT_TOKEN
         value: 8973560314:AAEpQWBP-gc2mex03qg8d_JQYL9RAZ5D6pU
       - key: TELEGRAM_CHAT_ID
-        value: 8973560314
+        value: '8044668960'
       - key: DRY_RUN
         value: True
       - key: ENCRYPTION_KEY
