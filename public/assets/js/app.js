@@ -103,15 +103,13 @@ async function handleRegister(e) {
     };
     try {
         const res = await fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(payload), noAuth: true });
-        showToast('Registered! OTP sent to your email and mobile number.', 'success');
-        // Prompt for email verification first
+        showToast('Registered! OTP sent to your email.', 'success');
+        
+        // Prompt for email verification only
         showOTPModal(payload.email, 'email_verify', () => {
-            showToast('Email verified! Now verify your mobile number.');
-            showOTPModal(payload.mobile_number, 'mobile_verify', () => {
-                showToast('Mobile verified! Account fully activated 🎉');
-                switchAuthTab('login');
-                document.getElementById('login-username').value = payload.username;
-            });
+            showToast('Email verified! Account fully activated 🎉');
+            switchAuthTab('login');
+            document.getElementById('login-username').value = payload.username;
         });
     } catch (err) { /* handled */ }
     finally { btn.innerHTML = '<span>Create Account</span> <i class="fa-solid fa-user-plus"></i>'; }

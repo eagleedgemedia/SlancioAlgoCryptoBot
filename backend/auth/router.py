@@ -92,27 +92,24 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db_session))
         password_hash=security.get_password_hash(user.password),
         role=role,
         is_email_verified=False,
-        is_mobile_verified=False,
+        is_mobile_verified=True,  # Mobile OTP verification bypassed as requested
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    # Auto-send OTPs for both email and mobile
+    # Auto-send OTP for email only
     email_otp = generate_otp()
-    mobile_otp = generate_otp()
     expiry = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES)
 
     db.add(OTPRecord(user_id=new_user.id, otp_code=email_otp, otp_type="email_verify", target=user.email, expires_at=expiry))
-    db.add(OTPRecord(user_id=new_user.id, otp_code=mobile_otp, otp_type="mobile_verify", target=mobile, expires_at=expiry))
     await db.commit()
 
     await send_email_otp(user.email, email_otp, "email_verify")
-    await send_sms_otp(mobile, mobile_otp)
 
     return {
         "status": "success",
-        "message": "Registered! OTP sent to your email and mobile. Please verify both.",
+        "message": "Registered! OTP sent to your email. Please verify.",
         "user_id": new_user.id,
         "role": role
     }
