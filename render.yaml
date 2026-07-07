@@ -16,7 +16,7 @@ services:
       - key: JWT_SECRET_KEY
         value: Hd5ngo0dIhZip2Br04AVOqkMoQw7k1jjDlchAhwbaOQ=
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:///./ksl_crypto_bot.db
+        value: postgresql+asyncpg://neondb_owner:npg_9Yn2OWpAegBw@ep-fragrant-sky-aogk3l4j.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require
       - key: DELTA_API_KEY
         value: gd7OZsrrwzumb8StxSTS84yW32SWJM
       - key: DELTA_API_SECRET

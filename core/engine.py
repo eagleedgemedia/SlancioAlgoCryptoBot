@@ -20,9 +20,9 @@ from core.exchange.position_manager import PositionManager
 
 
 class TradingEngine:
-    def __init__(self):
+    def __init__(self, api_key: str = None, api_secret: str = None):
         self.settings = get_settings()
-        self.client = DeltaExchangeClient()
+        self.client = DeltaExchangeClient(api_key=api_key, api_secret=api_secret)
         self.data_feed = DataFeed(client=self.client)
         self.signal_generator = SignalGenerator()
         self.position_sizer = PositionSizer(client=self.client)

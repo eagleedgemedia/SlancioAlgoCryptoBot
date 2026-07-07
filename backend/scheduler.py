@@ -10,7 +10,8 @@ from loguru import logger
 from sqlalchemy import select
 
 from database.connection import AsyncSessionLocal
-from database.models import User
+from core.security import security
+from database.models import User, ApiKey
 from core.engine import TradingEngine
 
 scheduler = AsyncIOScheduler()
@@ -20,17 +21,34 @@ async def run_bot_job():
     
     # 1. Check if ANY user has the bot toggled ON via the Dashboard
     async with AsyncSessionLocal() as session:
-        stmt = select(User).where(User.bot_enabled == True)
+        # Get active users who have bot_enabled=True and join with their API Keys
+        from sqlalchemy.orm import selectinload
+        stmt = select(User).where(User.bot_enabled == True).options(selectinload(User.api_keys))
         result = await session.execute(stmt)
         active_users = result.scalars().all()
         
         if not active_users:
-            logger.info("⏸️ Engine is paused in the dashboard. Skipping this hour.")
+            logger.info("⏸️ Engine is paused in the dashboard for all users. Skipping this hour.")
+            return
+
+        # For multi-tenant, we would loop over all active_users. 
+        # For now, we just take the first one (admin).
+        user = active_users[0]
+        if not user.api_keys:
+            logger.error(f"❌ User {user.email} has bot enabled but no API keys saved! Skipping.")
+            return
+            
+        db_keys = user.api_keys[0]
+        try:
+            api_key = security.decrypt(db_keys.encrypted_api_key)
+            api_secret = security.decrypt(db_keys.encrypted_api_secret)
+        except Exception as e:
+            logger.error(f"❌ Failed to decrypt API keys for {user.email}. Are they corrupted? {e}")
             return
 
     # 2. Run the heavy trading logic in a background thread 
     # (so we don't block the FastAPI web server from responding to clicks)
-    engine = TradingEngine()
+    engine = TradingEngine(api_key=api_key, api_secret=api_secret)
     
     try:
         await asyncio.to_thread(engine.run_candle_cycle)
