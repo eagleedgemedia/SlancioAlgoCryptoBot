@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slancio Crypto Algo Treding Engine | Control Panel</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+    <!-- Notification Toast -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Background Effects -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <!-- AUTHENTICATION VIEW -->
+    <main id="auth-view" class="view active">
+        <div class="glass-panel auth-card">
+            <div class="auth-header">
+                <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+                <h1>Slancio Algo Engine</h1>
+                <p>Advanced Crypto Trading Engine</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="login-username" placeholder="Username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <span>Access Dashboard</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="reg-username" placeholder="Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="reg-email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="reg-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <span>Create Account</span>
+                    <i class="fa-solid fa-user-plus"></i>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- DASHBOARD VIEW -->
+    <main id="dashboard-view" class="view">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-robot text-gradient"></i>
+                <span class="text-gradient">Slancio Algo</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Trade History</a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="details">
+                        <span id="user-display-name">User</span>
+                        <small id="user-role-badge" class="badge badge-outline">Role</small>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="btn btn-icon btn-danger-outline" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="dashboard-content">
+            
+            <header class="topbar">
+                <div>
+                    <h2>Overview</h2>
+                    <p class="text-muted">Manage your automated trading engine.</p>
+                </div>
+                
+                <div class="system-status">
+                    <span class="pulse-dot green"></span>
+                    <span>System Online</span>
+                </div>
+            </header>
+
+            <div class="bento-grid">
+                
+                <!-- Bot Control Card -->
+                <div class="glass-panel card bento-span-2">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-power-off text-accent"></i> Engine Status</h3>
+                    </div>
+                    <div class="card-body bot-control-body">
+                        <div class="status-indicator">
+                            <h2 id="bot-status-text" class="text-muted">OFFLINE</h2>
+                            <p class="text-muted">Your bot is currently paused.</p>
+                        </div>
+                        
+                        <label class="switch-large">
+                            <input type="checkbox" id="bot-toggle" onchange="toggleBot(event)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Live Market Info (Mock) -->
+                <div class="glass-panel card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-bitcoin-sign text-orange"></i> Live Market</h3>
+                    </div>
+                    <div class="card-body market-info">
+                        <div class="market-pair">BTC/USD <span class="badge badge-green">Perp</span></div>
+                        <h2 class="market-price">$63,842.50</h2>
+                        <div class="market-trend up"><i class="fa-solid fa-arrow-trend-up"></i> +2.4% (24h)</div>
+                    </div>
+                </div>
+
+                <!-- API Keys Card -->
+                <div class="glass-panel card bento-span-3">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-key text-blue"></i> Delta Exchange API Keys</h3>
+                        <p class="text-muted">Keys are heavily encrypted with AES-256 before saving.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="api-keys-form" onsubmit="saveApiKeys(event)" class="inline-form">
+                            <div class="input-group">
+                                <i class="fa-solid fa-fingerprint"></i>
+                                <input type="text" id="api-key-input" placeholder="API Key" required>
+                            </div>
+                            <div class="input-group">
+                                <i class="fa-solid fa-mask"></i>
+                                <input type="password" id="api-secret-input" placeholder="API Secret" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="btn-save-keys">
+                                <i class="fa-solid fa-shield-halved"></i> Save Securely
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Recent Trades (Mock for Phase 4, populated in Phase 5) -->
+                <div class="glass-panel card bento-span-3">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-list-check"></i> Recent Activity</h3>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Side</th>
+                                    <th>Entry Price</th>
+                                    <th>Status</th>
+                                    <th>PnL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trades-tbody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">No recent trades. Ensure API keys are saved and Bot is ON.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>
