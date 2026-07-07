@@ -1,62 +1,34 @@
 /* 
-  Slancio Crypto Algo Treding Engine — Frontend JavaScript Logic
-  =================================================
+  Slancio Crypto Algo Treding Engine — Full App JavaScript
 */
 
 const API_BASE = '/api';
+let _currentOTPContext = null; // { identifier, otp_type, onSuccess }
+let _currentUser = null;
 
-// DOM Elements
-const authView = document.getElementById('auth-view');
-const dashboardView = document.getElementById('dashboard-view');
-const botStatusText = document.getElementById('bot-status-text');
-const botToggle = document.getElementById('bot-toggle');
-
-// Helper: Toast Notifications
+// ─── TOAST ───
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
     const icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-accent"></i>' : '<i class="fa-solid fa-circle-exclamation text-danger"></i>';
     toast.innerHTML = `${icon} <span>${message}</span>`;
-    
     container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.add('fade-out');
-        setTimeout(() => toast.remove(), 400);
-    }, 4000);
+    setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 400); }, 4000);
 }
 
-// Helper: API Fetch with Auth Token
+// ─── API FETCH ───
 async function fetchAPI(endpoint, options = {}) {
     const token = localStorage.getItem('ksl_bot_token');
-    
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers
-    };
-    
-    if (token && !options.noAuth) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token && !options.noAuth) headers['Authorization'] = `Bearer ${token}`;
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            ...options,
-            headers
-        });
-        
+        const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         const data = await response.json();
-        
         if (!response.ok) {
-            if (response.status === 401) {
-                // Token expired or invalid
-                handleLogout(false);
-            }
+            if (response.status === 401) handleLogout(false);
             throw new Error(data.detail || 'An error occurred');
         }
-        
         return data;
     } catch (error) {
         showToast(error.message, 'error');
@@ -68,219 +40,383 @@ async function fetchAPI(endpoint, options = {}) {
 window.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('ksl_bot_token');
     if (token) {
-        try {
-            await loadUserProfile();
-            showView('dashboard');
-        } catch (e) {
-            showView('auth');
-        }
-    } else {
-        showView('auth');
-    }
+        try { await loadUserProfile(); showView('dashboard'); }
+        catch (e) { showView('auth'); }
+    } else { showView('auth'); }
 });
 
 function showView(viewName) {
-    if (viewName === 'auth') {
-        authView.classList.add('active');
-        dashboardView.classList.remove('active');
-    } else {
-        authView.classList.remove('active');
-        dashboardView.classList.add('active');
-    }
+    document.getElementById('auth-view').classList.toggle('active', viewName === 'auth');
+    document.getElementById('dashboard-view').classList.toggle('active', viewName === 'dashboard');
 }
 
-// ─── AUTHENTICATION ───
+// ─── MULTI-PAGE NAVIGATION ───
+function showPage(pageName, navEl) {
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`page-${pageName}`).classList.add('active');
+    if (navEl) navEl.classList.add('active');
+
+    if (pageName === 'trades') loadTradeHistory();
+    if (pageName === 'admin') loadAdminData();
+}
+
+// ─── AUTH TAB ───
 function switchAuthTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-    
-    if (tab === 'login') {
-        document.querySelector('.tab-btn:first-child').classList.add('active');
-        document.getElementById('login-form').classList.add('active');
-    } else {
-        document.querySelector('.tab-btn:last-child').classList.add('active');
-        document.getElementById('register-form').classList.add('active');
-    }
+    const tabIndex = { login: 0, register: 1, forgot: 2 };
+    document.querySelectorAll('.tab-btn')[tabIndex[tab]].classList.add('active');
+    document.getElementById(`${tab}-form`).classList.add('active');
 }
 
+// ─── LOGIN ───
 async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-    
     const formData = new FormData();
     formData.append('username', document.getElementById('login-username').value);
     formData.append('password', document.getElementById('login-password').value);
-    
     try {
-        const res = await fetch(`${API_BASE}/auth/login`, {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch(`${API_BASE}/auth/login`, { method: 'POST', body: formData });
         const data = await res.json();
-        
         if (!res.ok) throw new Error(data.detail || 'Login failed');
-        
         localStorage.setItem('ksl_bot_token', data.access_token);
         showToast('Login successful!');
-        
         await loadUserProfile();
         showView('dashboard');
-    } catch (err) {
-        showToast(err.message, 'error');
-    } finally {
-        btn.innerHTML = '<span>Access Dashboard</span> <i class="fa-solid fa-arrow-right"></i>';
-    }
+    } catch (err) { showToast(err.message, 'error'); }
+    finally { btn.innerHTML = '<span>Access Dashboard</span> <i class="fa-solid fa-arrow-right"></i>'; }
 }
 
+// ─── REGISTER ───
 async function handleRegister(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-    
     const payload = {
         username: document.getElementById('reg-username').value,
         email: document.getElementById('reg-email').value,
+        mobile_number: document.getElementById('reg-mobile').value,
         password: document.getElementById('reg-password').value
     };
-    
     try {
-        await fetchAPI('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            noAuth: true
+        const res = await fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(payload), noAuth: true });
+        showToast('Registered! OTP sent to your email and mobile number.', 'success');
+        // Prompt for email verification first
+        showOTPModal(payload.email, 'email_verify', () => {
+            showToast('Email verified! Now verify your mobile number.');
+            showOTPModal(payload.mobile_number, 'mobile_verify', () => {
+                showToast('Mobile verified! Account fully activated 🎉');
+                switchAuthTab('login');
+                document.getElementById('login-username').value = payload.username;
+            });
         });
-        
-        showToast('Registration successful! Please login.');
-        switchAuthTab('login');
-        document.getElementById('login-username').value = payload.username;
-    } catch (err) {
-        // Handled by fetchAPI toast
-    } finally {
-        btn.innerHTML = '<span>Create Account</span> <i class="fa-solid fa-user-plus"></i>';
-    }
+    } catch (err) { /* handled */ }
+    finally { btn.innerHTML = '<span>Create Account</span> <i class="fa-solid fa-user-plus"></i>'; }
 }
 
+// ─── FORGOT PASSWORD ───
+async function handleForgotPassword(e) {
+    e.preventDefault();
+    const identifier = document.getElementById('forgot-identifier').value.trim();
+    const btn = e.target.querySelector('button');
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+    try {
+        await fetchAPI('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ identifier, otp_type: 'forgot_password' }),
+            noAuth: true
+        });
+        showToast(`OTP sent to ${identifier}`);
+        showOTPModal(identifier, 'forgot_password', (otp) => {
+            // After OTP verified, prompt new password
+            const newPwd = prompt('OTP verified! Enter your new password:');
+            if (!newPwd || newPwd.length < 8) { showToast('Password must be at least 8 characters.', 'error'); return; }
+            fetchAPI('/auth/reset-password', {
+                method: 'POST',
+                body: JSON.stringify({ identifier, otp_code: otp, new_password: newPwd }),
+                noAuth: true
+            }).then(() => {
+                showToast('Password reset! Please login.');
+                switchAuthTab('login');
+            });
+        }, true); // true = return raw OTP to callback
+    } catch (err) { /* handled */ }
+    finally { btn.innerHTML = '<span>Send OTP</span> <i class="fa-solid fa-paper-plane"></i>'; }
+}
+
+// ─── OTP MODAL ───
+function showOTPModal(identifier, otp_type, onSuccess, returnOTP = false) {
+    _currentOTPContext = { identifier, otp_type, onSuccess, returnOTP };
+    const subtitles = {
+        email_verify: `Enter OTP sent to ${identifier}`,
+        mobile_verify: `Enter OTP sent to +91${identifier}`,
+        forgot_password: `Enter password reset OTP sent to ${identifier}`,
+    };
+    document.getElementById('otp-modal-subtitle').innerText = subtitles[otp_type] || 'Enter OTP';
+    ['otp-d1','otp-d2','otp-d3','otp-d4','otp-d5','otp-d6'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('otp-modal').style.display = 'flex';
+    document.getElementById('otp-d1').focus();
+}
+
+function closeOTPModal() {
+    document.getElementById('otp-modal').style.display = 'none';
+    _currentOTPContext = null;
+}
+
+function otpInput(el, nextId) {
+    if (el.value.length === 1 && nextId) document.getElementById(nextId).focus();
+}
+
+async function submitOTP() {
+    if (!_currentOTPContext) return;
+    const otp = ['otp-d1','otp-d2','otp-d3','otp-d4','otp-d5','otp-d6'].map(id => document.getElementById(id).value).join('');
+    if (otp.length < 6) { showToast('Enter all 6 digits.', 'error'); return; }
+
+    const btn = document.getElementById('otp-submit-btn');
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+    
+    try {
+        if (_currentOTPContext.otp_type !== 'forgot_password') {
+            await fetchAPI('/auth/otp/verify', {
+                method: 'POST',
+                body: JSON.stringify({ identifier: _currentOTPContext.identifier, otp_code: otp, otp_type: _currentOTPContext.otp_type }),
+                noAuth: true
+            });
+        }
+        closeOTPModal();
+        if (_currentOTPContext) {
+            if (_currentOTPContext.returnOTP) _currentOTPContext.onSuccess(otp);
+            else _currentOTPContext.onSuccess();
+        }
+    } catch (err) { /* toast shown by fetchAPI */ }
+    finally { btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Verify OTP'; }
+}
+
+async function resendOTP() {
+    if (!_currentOTPContext) return;
+    await fetchAPI('/auth/otp/send', {
+        method: 'POST',
+        body: JSON.stringify({ identifier: _currentOTPContext.identifier, otp_type: _currentOTPContext.otp_type }),
+        noAuth: true
+    });
+    showToast('OTP resent!');
+}
+
+// ─── LOGOUT ───
 function handleLogout(showMsg = true) {
     localStorage.removeItem('ksl_bot_token');
+    _currentUser = null;
     showView('auth');
     if (showMsg) showToast('Logged out securely');
 }
 
-// ─── DASHBOARD LOGIC ───
+// ─── PROFILE ───
 async function loadUserProfile() {
     const user = await fetchAPI('/users/me');
-    
-    // Update UI
+    _currentUser = user;
     document.getElementById('user-display-name').innerText = user.username;
-    document.getElementById('user-role-badge').innerText = user.bot_enabled ? 'Active' : 'Paused';
-    
-    // Set Bot Toggle State
+    document.getElementById('user-role-badge').innerText = user.role === 'admin' ? '👑 Admin' : (user.bot_enabled ? 'Active' : 'Paused');
     botToggle.checked = user.bot_enabled;
     updateBotStatusUI(user.bot_enabled);
-    
-    // Load Trades and Stats
-    loadTradeHistory();
+
+    // Populate position sizing fields
+    if (user.position_size_pct) document.getElementById('ps-risk-pct').value = (user.position_size_pct * 100).toFixed(1);
+    if (user.max_leverage) document.getElementById('ps-leverage').value = user.max_leverage;
+    if (user.stop_loss_points) document.getElementById('ps-sl-points').value = user.stop_loss_points;
+
+    // Show admin nav link
+    if (user.role === 'admin') document.getElementById('admin-nav-link').style.display = 'flex';
+
+    // Show verification status in settings page
+    document.getElementById('email-display').innerText = user.email || '—';
+    document.getElementById('mobile-display').innerText = user.mobile_number ? `+91${user.mobile_number}` : '—';
+    document.getElementById('email-verify-status').innerHTML = user.is_email_verified
+        ? '<span class="badge badge-green"><i class="fa-solid fa-check"></i> Verified</span>'
+        : '<button class="btn btn-sm btn-ghost" onclick="triggerVerification(\'email\')">Verify Now</button>';
+    document.getElementById('mobile-verify-status').innerHTML = user.is_mobile_verified
+        ? '<span class="badge badge-green"><i class="fa-solid fa-check"></i> Verified</span>'
+        : '<button class="btn btn-sm btn-ghost" onclick="triggerVerification(\'mobile\')">Verify Now</button>';
+
+    loadStats();
 }
 
-async function loadTradeHistory() {
-    try {
-        const stats = await fetchAPI('/users/stats');
-        document.getElementById('stat-winrate').innerText = `${stats.win_rate}%`;
-        document.getElementById('stat-pnl').innerText = `$${stats.total_pnl.toFixed(2)}`;
-        if (stats.total_pnl < 0) {
-            document.getElementById('stat-pnl').className = "text-danger";
-        }
-        document.getElementById('stat-trades').innerText = stats.total_trades;
-        
-        const trades = await fetchAPI('/users/trades');
-        const tbody = document.getElementById('trades-tbody');
-        
-        if (!trades || trades.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No recent trades found. Ensure Bot is ON and API keys are saved.</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = '';
-        trades.forEach(t => {
-            const row = document.createElement('tr');
-            
-            const sideClass = t.side === 'buy' || t.side === 'long' ? 'text-green' : 'text-danger';
-            const statusBadge = t.status === 'closed' ? '<span class="badge badge-outline">Closed</span>' : '<span class="badge badge-green">Open</span>';
-            const pnlStr = t.pnl_usdt ? `$${t.pnl_usdt.toFixed(2)}` : '-';
-            const pnlClass = t.pnl_usdt && t.pnl_usdt > 0 ? 'text-green' : (t.pnl_usdt && t.pnl_usdt < 0 ? 'text-danger' : '');
-            
-            row.innerHTML = `
-                <td><strong>${t.symbol}</strong></td>
-                <td class="${sideClass}">${t.side.toUpperCase()}</td>
-                <td>$${t.entry_price.toFixed(2)}</td>
-                <td>${statusBadge}</td>
-                <td class="${pnlClass}"><strong>${pnlStr}</strong></td>
-            `;
-            tbody.appendChild(row);
-        });
-        
-    } catch(e) {
-        console.error("Failed to load trade history:", e);
-    }
+async function triggerVerification(type) {
+    if (!_currentUser) return;
+    const identifier = type === 'email' ? _currentUser.email : _currentUser.mobile_number;
+    const otp_type = type === 'email' ? 'email_verify' : 'mobile_verify';
+    await fetchAPI('/auth/otp/send', {
+        method: 'POST',
+        body: JSON.stringify({ identifier, otp_type }),
+        noAuth: false
+    });
+    showOTPModal(identifier, otp_type, () => {
+        showToast(`${type === 'email' ? 'Email' : 'Mobile'} verified!`);
+        loadUserProfile();
+    });
 }
 
+// ─── BOT TOGGLE ───
+const botToggle = document.getElementById('bot-toggle');
 function updateBotStatusUI(isEnabled) {
-    if (isEnabled) {
-        botStatusText.innerText = 'ONLINE';
-        botStatusText.style.color = 'var(--success)';
-        botStatusText.style.textShadow = '0 0 10px var(--success-glow)';
-    } else {
-        botStatusText.innerText = 'OFFLINE';
-        botStatusText.style.color = 'var(--text-muted)';
-        botStatusText.style.textShadow = 'none';
-    }
+    const txt = document.getElementById('bot-status-text');
+    txt.innerText = isEnabled ? 'ONLINE' : 'OFFLINE';
+    txt.style.color = isEnabled ? 'var(--success)' : 'var(--text-muted)';
+    txt.style.textShadow = isEnabled ? '0 0 10px var(--success-glow)' : 'none';
 }
-
 async function toggleBot(e) {
     const isEnabled = e.target.checked;
     try {
-        const res = await fetchAPI('/users/bot/toggle', {
-            method: 'POST',
-            body: JSON.stringify({ enabled: isEnabled })
-        });
-        
+        const res = await fetchAPI('/users/bot/toggle', { method: 'POST', body: JSON.stringify({ enabled: isEnabled }) });
         updateBotStatusUI(res.bot_enabled);
         document.getElementById('user-role-badge').innerText = res.bot_enabled ? 'Active' : 'Paused';
         showToast(res.bot_enabled ? 'Bot Engine Started 🚀' : 'Bot Engine Paused ⏸️');
     } catch (err) {
-        // Revert UI switch on failure (e.g. no API keys saved)
         e.target.checked = !isEnabled;
         updateBotStatusUI(!isEnabled);
     }
 }
 
+// ─── API KEYS ───
 async function saveApiKeys(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-save-keys');
-    const originalText = btn.innerHTML;
+    const orig = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Encrypting...';
-    
-    const payload = {
-        api_key: document.getElementById('api-key-input').value,
-        api_secret: document.getElementById('api-secret-input').value,
-        exchange: 'delta_india'
-    };
-    
+    const payload = { api_key: document.getElementById('api-key-input').value, api_secret: document.getElementById('api-secret-input').value, exchange: 'delta_india' };
     try {
-        const res = await fetchAPI('/users/keys', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        const res = await fetchAPI('/users/keys', { method: 'POST', body: JSON.stringify(payload) });
         showToast(res.message);
-        
-        // Clear inputs for security
         document.getElementById('api-key-input').value = '';
         document.getElementById('api-secret-input').value = '';
-        document.getElementById('api-secret-input').placeholder = '•••••••••••••••• (Saved)';
-    } catch (err) {
-        // Error handled in fetchAPI
-    } finally {
-        btn.innerHTML = originalText;
-    }
+        document.getElementById('api-secret-input').placeholder = '•••••••••• (Saved & Encrypted)';
+    } catch (err) { /* handled */ }
+    finally { btn.innerHTML = orig; }
+}
+
+// ─── POSITION SIZING ───
+async function savePositionSizing(e) {
+    e.preventDefault();
+    const pct = parseFloat(document.getElementById('ps-risk-pct').value);
+    const lev = parseInt(document.getElementById('ps-leverage').value);
+    const sl = parseFloat(document.getElementById('ps-sl-points').value);
+    const payload = {};
+    if (!isNaN(pct)) payload.position_size_pct = pct / 100;
+    if (!isNaN(lev)) payload.max_leverage = lev;
+    if (!isNaN(sl)) payload.stop_loss_points = sl;
+    try {
+        await fetchAPI('/users/position-sizing', { method: 'PUT', body: JSON.stringify(payload) });
+        showToast('Position sizing saved! Bot will use these settings on next trade.');
+    } catch (err) { /* handled */ }
+}
+
+// ─── STATS ───
+async function loadStats() {
+    try {
+        const stats = await fetchAPI('/users/stats');
+        document.getElementById('stat-winrate').innerText = `${stats.win_rate}%`;
+        document.getElementById('stat-pnl').innerText = `$${stats.total_pnl.toFixed(2)}`;
+        document.getElementById('stat-pnl').className = stats.total_pnl < 0 ? 'text-danger' : 'text-gradient';
+        document.getElementById('stat-trades').innerText = stats.total_trades;
+    } catch(e) {}
+}
+
+// ─── TRADE HISTORY ───
+async function loadTradeHistory() {
+    try {
+        const trades = await fetchAPI('/users/trades');
+        const tbody = document.getElementById('trades-tbody');
+        if (!trades || trades.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No trades found. Bot must be ON to generate trades.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        trades.forEach(t => {
+            const row = document.createElement('tr');
+            const sideClass = t.side === 'buy' || t.side === 'long' ? 'text-green' : 'text-danger';
+            const statusBadge = t.status === 'closed' ? '<span class="badge badge-outline">Closed</span>' : '<span class="badge badge-green">Open</span>';
+            const pnlStr = t.pnl_usdt != null ? `$${t.pnl_usdt.toFixed(2)}` : '-';
+            const pnlClass = t.pnl_usdt > 0 ? 'text-green' : (t.pnl_usdt < 0 ? 'text-danger' : '');
+            const openedAt = t.opened_at ? new Date(t.opened_at).toLocaleString('en-IN') : '-';
+            row.innerHTML = `
+                <td><strong>${t.symbol}</strong></td>
+                <td class="${sideClass}">${t.side.toUpperCase()}</td>
+                <td>$${t.entry_price.toFixed(2)}</td>
+                <td>${t.exit_price ? '$'+t.exit_price.toFixed(2) : '-'}</td>
+                <td>${statusBadge}</td>
+                <td class="${pnlClass}"><strong>${pnlStr}</strong></td>
+                <td class="text-muted">${openedAt}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch(e) { console.error("Trade history load failed:", e); }
+}
+
+// ─── ADMIN PANEL ───
+async function loadAdminData() {
+    if (!_currentUser || _currentUser.role !== 'admin') return;
+    try {
+        const stats = await fetchAPI('/admin/stats');
+        document.getElementById('admin-stat-users').innerText = stats.total_users;
+        document.getElementById('admin-stat-winrate').innerText = `${stats.system_win_rate}%`;
+        document.getElementById('admin-stat-pnl').innerText = `$${stats.system_total_pnl.toFixed(2)}`;
+
+        const users = await fetchAPI('/admin/users');
+        const tbody = document.getElementById('admin-users-tbody');
+        tbody.innerHTML = '';
+        users.forEach(u => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${u.username}</strong></td>
+                <td>${u.email}</td>
+                <td>${u.mobile_number ? '+91'+u.mobile_number : '—'}</td>
+                <td><span class="badge ${u.role === 'admin' ? 'badge-green' : 'badge-outline'}">${u.role}</span></td>
+                <td>${u.is_email_verified ? '✅' : '❌'}</td>
+                <td>${u.is_mobile_verified ? '✅' : '❌'}</td>
+                <td><span class="badge ${u.bot_enabled ? 'badge-green' : 'badge-outline'}">${u.bot_enabled ? 'ON' : 'OFF'}</span></td>
+                <td>${(u.position_size_pct * 100).toFixed(1)}%</td>
+                <td>${u.max_leverage}x</td>
+                <td>
+                    <button class="btn btn-sm btn-ghost" onclick="adminEditPositionSizing('${u.id}', ${u.position_size_pct}, ${u.max_leverage}, ${u.stop_loss_points})">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger-outline" onclick="adminToggleUser('${u.id}')">
+                        ${u.is_active ? '<i class="fa-solid fa-ban"></i>' : '<i class="fa-solid fa-check"></i>'}
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch(e) { console.error("Admin load failed:", e); }
+}
+
+async function adminToggleUser(userId) {
+    try {
+        await fetchAPI(`/admin/users/${userId}/toggle-active`, { method: 'POST' });
+        showToast('User status updated.');
+        loadAdminData();
+    } catch(e) {}
+}
+
+async function adminEditPositionSizing(userId, currentPct, currentLev, currentSL) {
+    const pct = prompt(`Risk per trade (%) [current: ${(currentPct*100).toFixed(1)}%]:`, (currentPct*100).toFixed(1));
+    if (!pct) return;
+    const lev = prompt(`Max Leverage [current: ${currentLev}x]:`, currentLev);
+    if (!lev) return;
+    const sl = prompt(`Stop Loss Points [current: ${currentSL}]:`, currentSL);
+    if (!sl) return;
+    try {
+        await fetchAPI(`/admin/users/${userId}/position-sizing`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                position_size_pct: parseFloat(pct) / 100,
+                max_leverage: parseInt(lev),
+                stop_loss_points: parseFloat(sl)
+            })
+        });
+        showToast('Position sizing updated for user!');
+        loadAdminData();
+    } catch(e) {}
 }

@@ -95,6 +95,15 @@ class Settings(BaseSettings):
     app_env: AppEnvironment = Field(default=AppEnvironment.DEVELOPMENT)
     log_level: str = Field(default="INFO", description="Logging level")
 
+    # ── Email (SMTP for OTP) ──
+    email_host: str = Field(default="smtp.gmail.com", description="SMTP host")
+    email_port: int = Field(default=465, description="SMTP port")
+    email_user: str = Field(default="", description="SMTP username/email")
+    email_password: str = Field(default="", description="SMTP password or app password")
+
+    # ── SMS (Fast2SMS India for OTP) ──
+    fast2sms_api_key: str = Field(default="", description="Fast2SMS API key for India SMS OTP")
+
     model_config = {
         "env_file": str(PROJECT_ROOT / ".env"),
         "env_file_encoding": "utf-8",

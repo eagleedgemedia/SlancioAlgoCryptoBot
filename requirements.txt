@@ -6,6 +6,8 @@
 pandas>=2.2.0
 numpy>=1.26.0
 requests>=2.31.0
+aiosmtplib>=3.0.0           # Async SMTP for email OTP
+aiohttp>=3.9.0               # Async HTTP for Fast2SMS SMS OTP
 
 # ── API Framework ──
 fastapi>=0.115.0

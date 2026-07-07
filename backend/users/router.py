@@ -5,9 +5,10 @@ Manage API keys, Bot Toggle, and Settings.
 """
 
 from pydantic import BaseModel
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from backend.dependencies import get_current_user, get_db_session
 from database.models import User, ApiKey
@@ -26,14 +27,48 @@ class BotToggle(BaseModel):
     enabled: bool
 
 
+class PositionSizingUpdate(BaseModel):
+    position_size_pct: Optional[float] = None   # 0.001 - 0.10
+    max_leverage: Optional[int] = None           # 1 - 20
+    stop_loss_points: Optional[float] = None     # e.g. 400.0
+
+
 @router.get("/me")
 async def get_my_profile(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "username": current_user.username,
         "email": current_user.email,
-        "bot_enabled": current_user.bot_enabled
+        "mobile_number": current_user.mobile_number,
+        "role": current_user.role,
+        "bot_enabled": current_user.bot_enabled,
+        "is_email_verified": current_user.is_email_verified,
+        "is_mobile_verified": current_user.is_mobile_verified,
+        "position_size_pct": current_user.position_size_pct,
+        "max_leverage": current_user.max_leverage,
+        "stop_loss_points": current_user.stop_loss_points,
     }
+
+
+@router.put("/position-sizing")
+async def update_my_position_sizing(
+    data: PositionSizingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """User updates their own position sizing preferences."""
+    if data.position_size_pct is not None:
+        if not (0.001 <= data.position_size_pct <= 0.10):
+            raise HTTPException(status_code=400, detail="Position size must be between 0.1% and 10%.")
+        current_user.position_size_pct = data.position_size_pct
+    if data.max_leverage is not None:
+        if not (1 <= data.max_leverage <= 20):
+            raise HTTPException(status_code=400, detail="Leverage must be between 1x and 20x.")
+        current_user.max_leverage = data.max_leverage
+    if data.stop_loss_points is not None:
+        current_user.stop_loss_points = data.stop_loss_points
+    await db.commit()
+    return {"status": "success", "message": "Position sizing updated.", "position_size_pct": current_user.position_size_pct, "max_leverage": current_user.max_leverage}
 
 
 @router.post("/keys")

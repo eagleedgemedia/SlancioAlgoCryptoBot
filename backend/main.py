@@ -14,6 +14,7 @@ from loguru import logger
 from core.config import get_settings
 from backend.auth.router import router as auth_router
 from backend.users.router import router as users_router
+from backend.admin.router import router as admin_router
 from backend.scheduler import start_scheduler
 from database.connection import init_db_schema
 
@@ -36,6 +37,7 @@ app.add_middleware(
 # Include Routers
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(admin_router)
 
 
 @app.on_event("startup")
