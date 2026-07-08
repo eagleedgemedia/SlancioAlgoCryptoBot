@@ -287,7 +287,6 @@ async function loadUserProfile() {
         : '<button class="btn btn-sm btn-ghost" onclick="triggerVerification(\'mobile\')">Verify Now</button>';
 
     loadStats();
-    loadApiKeys();
 }
 
 async function triggerVerification(type) {
@@ -459,6 +458,7 @@ async function loadAdminData() {
 
     await loadAdminOpenTrades();
     await loadAdminUsers();
+    await loadApiKeys();
 }
 
 async function loadAdminOpenTrades() {
