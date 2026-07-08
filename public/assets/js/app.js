@@ -531,9 +531,6 @@ async function loadAdminUsers() {
             const sl = u.stop_loss_points || 400;
             const tp = u.take_profit_points || 800;
             const entryDist = u.ema_distance_points ?? 200;
-            const marginBadge = margin === 'isolated'
-                ? '<span class="badge badge-outline">Isolated</span>'
-                : '<span class="badge badge-green">Cross</span>';
             row.innerHTML = `
                 <td><strong>${u.username}</strong></td>
                 <td class="text-muted">${u.email}</td>
@@ -541,14 +538,13 @@ async function loadAdminUsers() {
                 <td>${u.is_email_verified ? '✅' : '❌'}</td>
                 <td><span class="badge ${u.bot_enabled ? 'badge-green' : 'badge-outline'}">${u.bot_enabled ? 'ON' : 'OFF'}</span></td>
                 <td><code>${tf}</code></td>
-                <td>${marginBadge}</td>
                 <td><strong>${lev}x</strong></td>
                 <td>${sl}</td>
                 <td>${tp}</td>
                 <td><strong>${entryDist}</strong></td>
                 <td>
                     <button class="btn btn-sm btn-ghost" title="Edit Trading Config"
-                        onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}','${margin}',${sl},${tp},${entryDist})">
+                        onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}',${sl},${tp},${entryDist})">
                         <i class="fa-solid fa-sliders"></i> Edit
                     </button>
                     <button class="btn btn-sm btn-danger-outline" title="${u.is_active ? 'Disable User' : 'Enable User'}"
@@ -596,13 +592,12 @@ async function adminCloseTrade(tradeId, username, symbol) {
     } catch(e) {}
 }
 
-async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
+async function adminEditConfig(userId, username, curPct, curLev, curTf, curSL, curTP, curEntryDist) {
     document.getElementById('ac-userid').value = userId;
     document.getElementById('ac-pct').value = curPct;
     document.getElementById('admin-config-subtitle').innerText = `Modify trading parameters for ${username}`;
     
     document.getElementById('ac-tf').value = curTf;
-    document.getElementById('ac-margin').value = curMargin;
     document.getElementById('ac-lev').value = curLev;
     document.getElementById('ac-sl').value = curSL;
     document.getElementById('ac-tp').value = curTP;
@@ -632,7 +627,6 @@ async function submitAdminConfig(e) {
             method: 'PUT',
             body: JSON.stringify({
                 trading_timeframe: document.getElementById('ac-tf').value,
-                margin_type: document.getElementById('ac-margin').value,
                 max_leverage: parseInt(document.getElementById('ac-lev').value),
                 position_size_pct: parseFloat(document.getElementById('ac-pct').value) / 100,
                 stop_loss_points: parseFloat(document.getElementById('ac-sl').value),
