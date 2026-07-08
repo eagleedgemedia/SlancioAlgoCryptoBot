@@ -370,10 +370,10 @@ async function loadApiKeys() {
                 if (res.status === 'error') {
                     document.getElementById(`margin-${k.id}`).innerHTML = '<span class="text-danger" style="font-size: 0.8rem;">Invalid Key</span>';
                 } else {
-                    if (res.margin_inr > 0) {
+                    if (res.margin_inr !== undefined) {
                         document.getElementById(`margin-${k.id}`).innerHTML = `₹${res.margin_inr.toFixed(2)} <span style="font-size: 0.7em; color: var(--text-muted);">($${res.margin_usdt.toFixed(2)})</span>`;
                     } else {
-                        document.getElementById(`margin-${k.id}`).innerText = `$${res.margin_usdt.toFixed(2)}`;
+                        document.getElementById(`margin-${k.id}`).innerText = `$0.00`;
                     }
                 }
             }).catch(e => {
@@ -629,10 +629,10 @@ async function adminEditConfig(userId, username, curPct, curLev, curTf, curSL, c
     
     try {
         const resp = await fetchAPI(`/admin/users/${userId}/balance`);
-        if (resp.margin_inr > 0) {
+        if (resp.margin_inr !== undefined) {
             document.getElementById('ac-margin-balance').innerHTML = `₹${resp.margin_inr.toFixed(2)} <span style="font-size: 0.7em; color: var(--text-muted);">($${resp.margin_usdt.toFixed(2)})</span>`;
         } else {
-            document.getElementById('ac-margin-balance').innerHTML = `$${resp.margin_usdt.toFixed(2)}`;
+            document.getElementById('ac-margin-balance').innerHTML = `$0.00`;
         }
     } catch(e) {
         document.getElementById('ac-margin-balance').innerText = '$0.00';
