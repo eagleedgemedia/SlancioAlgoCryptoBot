@@ -80,9 +80,9 @@
                 <input type="hidden" id="ac-userid">
                 <input type="hidden" id="ac-pct">
                 
-                <div class="bento-grid">
-                    <div class="form-field bento-span-1">
-                        <label>Timeframe</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-field">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem;">Timeframe</label>
                         <select id="ac-tf" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
                             <option value="1m">1m</option>
                             <option value="5m">5m</option>
@@ -92,8 +92,8 @@
                             <option value="1d">1d</option>
                         </select>
                     </div>
-                    <div class="form-field bento-span-1 mt-2">
-                        <label>Leverage (x)</label>
+                    <div class="form-field">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem;">Leverage (x)</label>
                         <select id="ac-lev" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
                             <option value="1">1x</option>
                             <option value="25">25x</option>
@@ -103,24 +103,18 @@
                             <option value="200">200x</option>
                         </select>
                     </div>
-                    <div class="form-field bento-span-1 mt-2">
-                        <label>Available Margin</label>
-                        <div class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #10b981; border-radius: 8px; font-weight: 600; text-align: center;">
-                            <span id="ac-margin-balance"><i class="fa-solid fa-circle-notch fa-spin"></i></span> USDT
-                        </div>
-                    </div>
                     
-                    <div class="form-field bento-span-1 mt-2">
-                        <label>Stop Loss (pts)</label>
+                    <div class="form-field">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem;">Stop Loss (pts)</label>
                         <input type="number" id="ac-sl" class="input-group" step="1" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
                     </div>
-                    <div class="form-field bento-span-1 mt-2">
-                        <label>Take Profit (pts)</label>
+                    <div class="form-field">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem;">Take Profit (pts)</label>
                         <input type="number" id="ac-tp" class="input-group" step="1" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
                     </div>
 
-                    <div class="form-field bento-span-2 mt-2">
-                        <label>Entry Condition Distance (from EMA 7 Low)</label>
+                    <div class="form-field" style="grid-column: span 2;">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem;">Entry Condition Distance (from EMA 7 Low)</label>
                         <select id="ac-entry-dist" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
                             <option value="25">25 points</option>
                             <option value="50">50 points</option>
@@ -128,6 +122,13 @@
                             <option value="150">150 points</option>
                             <option value="200">200 points</option>
                         </select>
+                    </div>
+
+                    <div class="form-field" style="grid-column: span 2;">
+                        <label style="margin-bottom: 8px; display: block; color: var(--text-muted); font-size: 0.9rem; text-align: center;">Live Available Margin</label>
+                        <div class="input-group" style="width: 100%; padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; border-radius: 8px; font-weight: 600; text-align: center; font-size: 1.1rem;">
+                            <span id="ac-margin-balance"><i class="fa-solid fa-circle-notch fa-spin"></i></span> USDT
+                        </div>
                     </div>
                 </div>
 
