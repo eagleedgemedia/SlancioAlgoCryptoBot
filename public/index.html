@@ -145,6 +145,11 @@
 
     <!-- AUTHENTICATION VIEW -->
     <main id="auth-view" class="view active">
+        <div style="position: absolute; top: 20px; right: 20px;">
+            <button class="btn btn-icon btn-ghost" id="theme-toggle-auth" onclick="cycleTheme()" title="Change Theme">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </div>
         <div class="glass-panel auth-card">
             <div class="auth-header">
                 <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
@@ -244,9 +249,14 @@
                         <small id="user-role-badge" class="badge badge-outline">Role</small>
                     </div>
                 </div>
-                <button onclick="handleLogout()" class="btn btn-icon btn-danger-outline" title="Logout">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-icon btn-ghost" id="theme-toggle-dash" onclick="cycleTheme()" title="Change Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button onclick="handleLogout()" class="btn btn-icon btn-danger-outline" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
             </div>
         </aside>
 

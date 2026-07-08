@@ -25,6 +25,56 @@
     --font-heading: 'Outfit', sans-serif;
 }
 
+/* Theme: Day Mode (Light) */
+body.theme-day {
+    --bg-dark: #f1f5f9;
+    --panel-bg: rgba(255, 255, 255, 0.85);
+    --panel-border: rgba(0, 0, 0, 0.1);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-glow: rgba(37, 99, 235, 0.2);
+    --success: #059669;
+    --success-glow: rgba(5, 150, 105, 0.2);
+}
+body.theme-day .glass-panel { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+body.theme-day .bg-orb { opacity: 0.15; }
+body.theme-day .text-gradient {
+    background: linear-gradient(135deg, #1e40af, #6d28d9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+body.theme-day .input-group input, body.theme-day .input-group select {
+    background: rgba(255, 255, 255, 0.5) !important;
+    color: #0f172a !important;
+    border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Theme: Blue Light Filter (Warm/Sepia) */
+body.theme-bluelight {
+    --bg-dark: #2a231b;
+    --panel-bg: rgba(45, 35, 25, 0.7);
+    --panel-border: rgba(245, 158, 11, 0.15);
+    --text-main: #ffe4c4;
+    --text-muted: #d4a373;
+    --primary: #f59e0b;
+    --primary-hover: #d97706;
+    --primary-glow: rgba(245, 158, 11, 0.3);
+    --success: #84cc16;
+}
+body.theme-bluelight .orb-1 { background: radial-gradient(circle, #f59e0b 0%, transparent 70%); }
+body.theme-bluelight .orb-2 { background: radial-gradient(circle, #ea580c 0%, transparent 70%); }
+body.theme-bluelight .text-gradient {
+    background: linear-gradient(135deg, #fcd34d, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+body.theme-bluelight .input-group input, body.theme-bluelight .input-group select {
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #ffe4c4 !important;
+}
+
 * {
     margin: 0;
     padding: 0;

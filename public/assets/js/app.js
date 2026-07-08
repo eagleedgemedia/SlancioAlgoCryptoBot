@@ -70,6 +70,38 @@ function switchAuthTab(tab) {
     document.getElementById(`${tab}-form`).classList.add('active');
 }
 
+// ─── THEME MANAGEMENT ───
+const themes = ['night', 'day', 'bluelight'];
+let currentTheme = localStorage.getItem('ksl_theme') || 'night';
+
+function applyTheme(theme) {
+    document.body.classList.remove('theme-day', 'theme-bluelight');
+    if (theme !== 'night') {
+        document.body.classList.add(`theme-${theme}`);
+    }
+    
+    // Update icons
+    const iconClass = theme === 'day' ? 'fa-sun text-orange' 
+                    : theme === 'bluelight' ? 'fa-eye-low-vision text-orange' 
+                    : 'fa-moon';
+                    
+    document.getElementById('theme-toggle-auth').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+    document.getElementById('theme-toggle-dash').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+}
+
+function cycleTheme() {
+    let idx = themes.indexOf(currentTheme);
+    idx = (idx + 1) % themes.length;
+    currentTheme = themes[idx];
+    localStorage.setItem('ksl_theme', currentTheme);
+    applyTheme(currentTheme);
+    showToast(`Theme changed to ${currentTheme.toUpperCase()}`);
+}
+
+// Apply on load
+applyTheme(currentTheme);
+
+
 // ─── LOGIN ───
 async function handleLogin(e) {
     e.preventDefault();
