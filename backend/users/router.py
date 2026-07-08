@@ -209,7 +209,8 @@ async def get_key_balance(
                     
             return {"status": "success", "margin_inr": inr_margin, "margin_usdt": usdt_margin}
                 
-        return {"status": "success", "margin_inr": 0.0, "margin_usdt": 0.0}
+        logger.error(f"Delta API error for key {key_id}: {resp}")
+        return {"status": "error", "margin_inr": 0.0, "margin_usdt": 0.0, "message": resp.get("error", "Unknown Delta API error")}
     except Exception as e:
         logger.warning(f"Could not fetch margin for key {key_id}: {e}")
         return {"status": "error", "margin_inr": 0.0, "margin_usdt": 0.0}
