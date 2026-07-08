@@ -104,24 +104,10 @@ async function handleRegister(e) {
     try {
         const res = await fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(payload), noAuth: true });
         
-        // Prompt for email verification only
-        showOTPModal(payload.email, 'email_verify', () => {
-            showToast('Email verified! Account fully activated 🎉');
-            switchAuthTab('login');
-            document.getElementById('login-username').value = payload.username;
-        });
-
-        // DEV MODE: if email not configured, auto-fill the OTP from the API response
-        if (res.dev_otp) {
-            showToast(`[DEV] Email not configured. OTP auto-filled: ${res.dev_otp}`, 'error');
-            const digits = res.dev_otp.toString().split('');
-            ['otp-d1','otp-d2','otp-d3','otp-d4','otp-d5','otp-d6'].forEach((id, i) => {
-                const el = document.getElementById(id);
-                if (el && digits[i]) el.value = digits[i];
-            });
-        } else {
-            showToast('OTP sent to your email. Please verify.', 'success');
-        }
+        // Registration now auto-verifies — no OTP needed, go straight to login
+        showToast(`Account created! You are now ${res.role}. Please login.`, 'success');
+        switchAuthTab('login');
+        document.getElementById('login-username').value = payload.username;
     } catch (err) { /* handled */ }
     finally { btn.innerHTML = '<span>Create Account</span> <i class="fa-solid fa-user-plus"></i>'; }
 }

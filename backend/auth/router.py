@@ -67,11 +67,13 @@ def _normalize_mobile(mobile: str) -> str:
 # ─── REGISTRATION ───
 @router.post("/register")
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db_session)):
-    """Register a new user with email + Indian mobile number."""
-
+    """
+    Register a new user. Email is auto-verified so the user can login immediately.
+    A welcome email with their OTP is sent in the background (non-blocking).
+    """
     mobile = _normalize_mobile(user.mobile_number)
 
-    # Check if email, username, or mobile already exists
+    # Check username/email/mobile uniqueness
     stmt = select(User).where(
         (User.username == user.username) |
         (User.email == user.email) |
@@ -79,9 +81,9 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db_session))
     )
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Username, email, or mobile number already registered.")
+        raise HTTPException(status_code=400, detail="Username or email already registered.")
 
-    # Determine role — first user is always admin
+    # First user is always admin
     count_result = await db.execute(select(User))
     role = "admin" if len(count_result.scalars().all()) == 0 else "user"
 
@@ -91,36 +93,31 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db_session))
         mobile_number=mobile,
         password_hash=security.get_password_hash(user.password),
         role=role,
-        is_email_verified=False,
-        is_mobile_verified=True,  # Mobile OTP verification bypassed as requested
+        is_email_verified=True,   # Auto-verified — no OTP block on registration
+        is_mobile_verified=True,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    # Auto-send OTP for email only
-    email_otp = generate_otp()
-    expiry = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    # Send welcome/confirmation email (non-blocking, best-effort)
+    try:
+        welcome_otp = generate_otp()
+        expiry = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES)
+        db.add(OTPRecord(user_id=new_user.id, otp_code=welcome_otp, otp_type="email_verify",
+                         target=user.email, expires_at=expiry))
+        await db.commit()
+        await send_email_otp(user.email, welcome_otp, "email_verify")
+    except Exception as e:
+        logger.warning(f"Welcome email failed (non-critical): {e}")
 
-    db.add(OTPRecord(user_id=new_user.id, otp_code=email_otp, otp_type="email_verify", target=user.email, expires_at=expiry))
-    await db.commit()
-
-    await send_email_otp(user.email, email_otp, "email_verify")
-
-    # In dev mode (no SMTP configured), return OTP so user can enter it manually
-    dev_otp = get_dev_otp(user.email)
-
-    response = {
+    return {
         "status": "success",
-        "message": "Registered! OTP sent to your email. Please verify.",
+        "message": f"Account created successfully! You are registered as {role}. Please login now.",
         "user_id": new_user.id,
-        "role": role
+        "role": role,
+        "auto_verified": True,
     }
-    if dev_otp:
-        response["dev_otp"] = dev_otp
-        response["message"] = f"Registered! [DEV MODE] Email not configured — your OTP is: {dev_otp}"
-
-    return response
 
 
 # ─── RESEND OTP ───
