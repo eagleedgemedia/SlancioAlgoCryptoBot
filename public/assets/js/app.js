@@ -271,10 +271,7 @@ async function loadUserProfile() {
     botToggle.checked = user.bot_enabled;
     updateBotStatusUI(user.bot_enabled);
 
-    // Populate position sizing fields
-    if (user.position_size_pct) document.getElementById('ps-risk-pct').value = (user.position_size_pct * 100).toFixed(1);
-    if (user.max_leverage) document.getElementById('ps-leverage').value = user.max_leverage;
-    if (user.stop_loss_points) document.getElementById('ps-sl-points').value = user.stop_loss_points;
+
 
     // Show admin nav link
     if (user.role === 'admin') document.getElementById('admin-nav-link').style.display = 'flex';
@@ -406,21 +403,7 @@ async function saveApiKeys(e) {
     finally { btn.innerHTML = orig; }
 }
 
-// ─── POSITION SIZING ───
-async function savePositionSizing(e) {
-    e.preventDefault();
-    const pct = parseFloat(document.getElementById('ps-risk-pct').value);
-    const lev = parseInt(document.getElementById('ps-leverage').value);
-    const sl = parseFloat(document.getElementById('ps-sl-points').value);
-    const payload = {};
-    if (!isNaN(pct)) payload.position_size_pct = pct / 100;
-    if (!isNaN(lev)) payload.max_leverage = lev;
-    if (!isNaN(sl)) payload.stop_loss_points = sl;
-    try {
-        await fetchAPI('/users/position-sizing', { method: 'PUT', body: JSON.stringify(payload) });
-        showToast('Position sizing saved! Bot will use these settings on next trade.');
-    } catch (err) { /* handled */ }
-}
+
 
 // ─── STATS ───
 async function loadStats() {

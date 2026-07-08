@@ -355,43 +355,6 @@
                         </div>
                     </div>
 
-                    <!-- Position Sizing Card (User) -->
-                    <div class="glass-panel card bento-span-1">
-                        <div class="card-header">
-                            <h3><i class="fa-solid fa-sliders text-orange"></i> Position Sizing</h3>
-                        </div>
-                        <div class="card-body">
-                            <form id="position-sizing-form" onsubmit="savePositionSizing(event)">
-                                <div class="form-field">
-                                    <label>Risk Per Trade</label>
-                                    <div class="input-group">
-                                        <i class="fa-solid fa-percent"></i>
-                                        <input type="number" id="ps-risk-pct" step="0.1" min="0.1" max="10" placeholder="2.0" value="">
-                                    </div>
-                                    <small class="text-muted">% of account per trade (0.1% - 10%)</small>
-                                </div>
-                                <div class="form-field mt-2">
-                                    <label>Max Leverage</label>
-                                    <div class="input-group">
-                                        <i class="fa-solid fa-x"></i>
-                                        <input type="number" id="ps-leverage" min="1" max="20" placeholder="10" value="">
-                                    </div>
-                                    <small class="text-muted">1x to 20x</small>
-                                </div>
-                                <div class="form-field mt-2">
-                                    <label>Stop Loss (points)</label>
-                                    <div class="input-group">
-                                        <i class="fa-solid fa-shield"></i>
-                                        <input type="number" id="ps-sl-points" step="10" min="50" max="2000" placeholder="400" value="">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 mt-3">
-                                    <i class="fa-solid fa-floppy-disk"></i> Save Settings
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
                 </div>
             </div>
 
