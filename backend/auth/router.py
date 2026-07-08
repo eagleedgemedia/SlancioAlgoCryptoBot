@@ -17,7 +17,7 @@ from sqlalchemy import select
 from backend.auth import security
 from database.connection import get_db_session
 from database.models import User, OTPRecord
-from core.otp_service import generate_otp, send_email_otp, send_sms_otp
+from core.otp_service import generate_otp, send_email_otp, send_sms_otp, get_dev_otp
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -107,12 +107,20 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db_session))
 
     await send_email_otp(user.email, email_otp, "email_verify")
 
-    return {
+    # In dev mode (no SMTP configured), return OTP so user can enter it manually
+    dev_otp = get_dev_otp(user.email)
+
+    response = {
         "status": "success",
         "message": "Registered! OTP sent to your email. Please verify.",
         "user_id": new_user.id,
         "role": role
     }
+    if dev_otp:
+        response["dev_otp"] = dev_otp
+        response["message"] = f"Registered! [DEV MODE] Email not configured — your OTP is: {dev_otp}"
+
+    return response
 
 
 # ─── RESEND OTP ───

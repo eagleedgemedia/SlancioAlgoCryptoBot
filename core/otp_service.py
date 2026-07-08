@@ -18,9 +18,18 @@ from core.config import get_settings
 settings = get_settings()
 
 
+# In-memory store for dev mode OTPs (when no email creds configured)
+_dev_otp_store: dict = {}
+
+
 def generate_otp(length: int = 6) -> str:
     """Generate a secure 6-digit numeric OTP."""
     return ''.join(random.choices(string.digits, k=length))
+
+
+def get_dev_otp(identifier: str) -> str | None:
+    """Return the stored dev OTP for an email (returns None in production)."""
+    return _dev_otp_store.get(identifier)
 
 
 # ─── Email OTP ───
@@ -30,8 +39,9 @@ async def send_email_otp(to_email: str, otp: str, purpose: str = "verification")
     Requires EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASSWORD in .env
     """
     if not settings.email_user or not settings.email_password:
-        logger.warning("Email credentials not configured. OTP logged only.")
-        logger.info(f"[DEV] Email OTP for {to_email}: {otp}")
+        logger.warning(f"[DEV MODE] Email not configured — OTP for {to_email} is: {otp}")
+        # Store in a module-level dict so the register endpoint can return it
+        _dev_otp_store[to_email] = otp
         return True  # In dev, treat as success
 
     subject_map = {
