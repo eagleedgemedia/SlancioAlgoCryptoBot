@@ -77,5 +77,37 @@ async def init_db_schema():
                         logger.warning(f"Migration skipped (already applied): {me}")
                         
         logger.success("✅ Database schema initialized successfully.")
+        
+        # --- Seed Default Admin User ---
+        from database.models import User
+        from backend.auth.security import get_password_hash
+        from sqlalchemy import select
+        
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User).where(User.username == "Admin"))
+            admin_user = result.scalar_one_or_none()
+            if not admin_user:
+                logger.info("🌱 Seeding default Admin user...")
+                new_admin = User(
+                    username="Admin",
+                    email="admin@slancio.io",
+                    mobile_number="0000000000",
+                    password_hash=get_password_hash("RagiKaushal@2816"),
+                    role="admin",
+                    is_active=True,
+                    is_email_verified=True,
+                    is_mobile_verified=True,
+                    bot_enabled=False
+                )
+                session.add(new_admin)
+                await session.commit()
+                logger.success("✅ Default Admin user created: Admin / RagiKaushal@2816")
+            else:
+                # Ensure the existing Admin user has the correct password if they got locked out
+                # (Optional safety measure, but let's just make sure they have admin role)
+                if admin_user.role != "admin":
+                    admin_user.role = "admin"
+                    await session.commit()
+                    
     except Exception as e:
         logger.error(f"❌ Failed to initialize database: {e}")
