@@ -358,63 +358,160 @@ async function loadAdminData() {
     try {
         const stats = await fetchAPI('/admin/stats');
         document.getElementById('admin-stat-users').innerText = stats.total_users;
-        document.getElementById('admin-stat-winrate').innerText = `${stats.system_win_rate}%`;
-        document.getElementById('admin-stat-pnl').innerText = `$${stats.system_total_pnl.toFixed(2)}`;
+        document.getElementById('admin-stat-open').innerText = stats.open_trades || 0;
+        document.getElementById('admin-stat-pnl').innerText = `$${(stats.system_total_pnl || 0).toFixed(2)}`;
+    } catch(e) {}
 
+    await loadAdminOpenTrades();
+    await loadAdminUsers();
+}
+
+async function loadAdminOpenTrades() {
+    try {
+        const trades = await fetchAPI('/admin/trades/open');
+        const tbody = document.getElementById('admin-trades-tbody');
+        if (!trades || trades.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-3">No open trades right now.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        trades.forEach(t => {
+            const row = document.createElement('tr');
+            const sideClass = t.side === 'buy' || t.side === 'long' ? 'text-green' : 'text-danger';
+            const openedAt = t.opened_at ? new Date(t.opened_at).toLocaleString('en-IN') : '-';
+            row.innerHTML = `
+                <td><strong>${t.username}</strong></td>
+                <td>${t.symbol}</td>
+                <td class="${sideClass}"><strong>${t.side.toUpperCase()}</strong></td>
+                <td>$${t.entry_price.toFixed(2)}</td>
+                <td class="text-danger">$${t.stop_loss.toFixed(2)}</td>
+                <td class="text-green">$${t.take_profit_target.toFixed(2)}</td>
+                <td>${t.quantity}</td>
+                <td>${t.leverage}x</td>
+                <td class="text-muted">${openedAt}</td>
+                <td>
+                    <button class="btn btn-sm btn-ghost" title="Modify SL/TP"
+                        onclick="adminModifyTrade('${t.id}', ${t.stop_loss}, ${t.take_profit_target})">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger-outline" title="Force Close Position"
+                        onclick="adminCloseTrade('${t.id}', '${t.username}', '${t.symbol}')">
+                        <i class="fa-solid fa-xmark"></i> Close
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch(e) { console.error("Admin open trades failed:", e); }
+}
+
+async function loadAdminUsers() {
+    try {
         const users = await fetchAPI('/admin/users');
         const tbody = document.getElementById('admin-users-tbody');
         tbody.innerHTML = '';
         users.forEach(u => {
             const row = document.createElement('tr');
+            const pct = ((u.position_size_pct || 0.02) * 100).toFixed(1);
+            const lev = u.max_leverage || 10;
+            const tf = u.trading_timeframe || '1h';
+            const margin = u.margin_type || 'isolated';
+            const sl = u.stop_loss_points || 400;
+            const tp = u.take_profit_points || 800;
+            const marginBadge = margin === 'isolated'
+                ? '<span class="badge badge-outline">Isolated</span>'
+                : '<span class="badge badge-green">Cross</span>';
             row.innerHTML = `
                 <td><strong>${u.username}</strong></td>
-                <td>${u.email}</td>
-                <td>${u.mobile_number ? '+91'+u.mobile_number : '—'}</td>
+                <td class="text-muted">${u.email}</td>
                 <td><span class="badge ${u.role === 'admin' ? 'badge-green' : 'badge-outline'}">${u.role}</span></td>
                 <td>${u.is_email_verified ? '✅' : '❌'}</td>
-                <td>${u.is_mobile_verified ? '✅' : '❌'}</td>
                 <td><span class="badge ${u.bot_enabled ? 'badge-green' : 'badge-outline'}">${u.bot_enabled ? 'ON' : 'OFF'}</span></td>
-                <td>${(u.position_size_pct * 100).toFixed(1)}%</td>
-                <td>${u.max_leverage}x</td>
+                <td><code>${tf}</code></td>
+                <td>${marginBadge}</td>
+                <td><strong>${lev}x</strong></td>
+                <td>${pct}%</td>
+                <td>${sl}</td>
+                <td>${tp}</td>
                 <td>
-                    <button class="btn btn-sm btn-ghost" onclick="adminEditPositionSizing('${u.id}', ${u.position_size_pct}, ${u.max_leverage}, ${u.stop_loss_points})">
-                        <i class="fa-solid fa-sliders"></i>
+                    <button class="btn btn-sm btn-ghost" title="Edit Trading Config"
+                        onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}','${margin}',${sl},${tp})">
+                        <i class="fa-solid fa-sliders"></i> Edit
                     </button>
-                    <button class="btn btn-sm btn-danger-outline" onclick="adminToggleUser('${u.id}')">
+                    <button class="btn btn-sm btn-danger-outline" title="${u.is_active ? 'Disable User' : 'Enable User'}"
+                        onclick="adminToggleUser('${u.id}')">
                         ${u.is_active ? '<i class="fa-solid fa-ban"></i>' : '<i class="fa-solid fa-check"></i>'}
                     </button>
                 </td>
             `;
             tbody.appendChild(row);
         });
-    } catch(e) { console.error("Admin load failed:", e); }
+    } catch(e) { console.error("Admin users load failed:", e); }
 }
 
 async function adminToggleUser(userId) {
     try {
         await fetchAPI(`/admin/users/${userId}/toggle-active`, { method: 'POST' });
         showToast('User status updated.');
+        loadAdminUsers();
+    } catch(e) {}
+}
+
+async function adminModifyTrade(tradeId, currentSL, currentTP) {
+    const sl = prompt(`New Stop Loss price [current: $${currentSL.toFixed(2)}]:`, currentSL.toFixed(2));
+    if (!sl) return;
+    const tp = prompt(`New Take Profit price [current: $${currentTP.toFixed(2)}]:`, currentTP.toFixed(2));
+    if (!tp) return;
+
+    try {
+        const resp = await fetchAPI(`/admin/trades/${tradeId}/modify`, {
+            method: 'PUT',
+            body: JSON.stringify({ stop_loss: parseFloat(sl), take_profit: parseFloat(tp) })
+        });
+        showToast(`SL/TP modified — ${resp.delta_exchange_status}`);
         loadAdminData();
     } catch(e) {}
 }
 
-async function adminEditPositionSizing(userId, currentPct, currentLev, currentSL) {
-    const pct = prompt(`Risk per trade (%) [current: ${(currentPct*100).toFixed(1)}%]:`, (currentPct*100).toFixed(1));
-    if (!pct) return;
-    const lev = prompt(`Max Leverage [current: ${currentLev}x]:`, currentLev);
-    if (!lev) return;
-    const sl = prompt(`Stop Loss Points [current: ${currentSL}]:`, currentSL);
-    if (!sl) return;
+async function adminCloseTrade(tradeId, username, symbol) {
+    if (!confirm(`Force-close ${symbol} trade for user "${username}" at market price? This cannot be undone.`)) return;
     try {
-        await fetchAPI(`/admin/users/${userId}/position-sizing`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                position_size_pct: parseFloat(pct) / 100,
-                max_leverage: parseInt(lev),
-                stop_loss_points: parseFloat(sl)
-            })
-        });
-        showToast('Position sizing updated for user!');
+        const resp = await fetchAPI(`/admin/trades/${tradeId}/close`, { method: 'POST' });
+        const pnl = resp.pnl_usdt != null ? ` | PnL: $${resp.pnl_usdt.toFixed(2)}` : '';
+        showToast(`Position closed${pnl} — ${resp.delta_exchange_status}`);
         loadAdminData();
     } catch(e) {}
 }
+
+async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP) {
+    // Build a form-like prompt sequence
+    const tf = prompt(`Timeframe for ${username} (1m/5m/15m/1h/4h/1d) [current: ${curTf}]:`, curTf);
+    if (!tf) return;
+    const margin = prompt(`Margin type (isolated/cross) [current: ${curMargin}]:`, curMargin);
+    if (!margin) return;
+    const lev = prompt(`Max Leverage (1-200x) [current: ${curLev}x]:`, curLev);
+    if (!lev) return;
+    const pct = prompt(`Risk per trade % (0.1-10) [current: ${curPct}%]:`, curPct);
+    if (!pct) return;
+    const sl = prompt(`Stop Loss points [current: ${curSL}]:`, curSL);
+    if (!sl) return;
+    const tp = prompt(`Take Profit points [current: ${curTP}]:`, curTP);
+    if (!tp) return;
+
+    try {
+        const resp = await fetchAPI(`/admin/users/${userId}/trading-config`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                trading_timeframe: tf.trim(),
+                margin_type: margin.trim().toLowerCase(),
+                max_leverage: parseInt(lev),
+                position_size_pct: parseFloat(pct) / 100,
+                stop_loss_points: parseFloat(sl),
+                take_profit_points: parseFloat(tp),
+            })
+        });
+        showToast(`Config saved for ${username}! Delta: ${resp.delta_exchange_status}`);
+        loadAdminUsers();
+    } catch(e) {}
+}
+

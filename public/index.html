@@ -347,7 +347,7 @@
                 <header class="topbar">
                     <div>
                         <h2><i class="fa-solid fa-crown text-accent"></i> Admin Panel</h2>
-                        <p class="text-muted">Manage all users, position sizing, and system stats.</p>
+                        <p class="text-muted">Manage all users, trading config, and live positions.</p>
                     </div>
                     <button class="btn btn-ghost" onclick="loadAdminData()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
                 </header>
@@ -363,24 +363,54 @@
                     </div>
                     <div class="glass-panel card bento-span-1 stat-card">
                         <div class="card-body text-center">
-                            <i class="fa-solid fa-chart-pie text-green fa-2x mb-2"></i>
-                            <h4 class="text-muted">System Win Rate</h4>
-                            <h2 id="admin-stat-winrate">0%</h2>
+                            <i class="fa-solid fa-bolt text-orange fa-2x mb-2"></i>
+                            <h4 class="text-muted">Open Trades</h4>
+                            <h2 id="admin-stat-open">0</h2>
                         </div>
                     </div>
                     <div class="glass-panel card bento-span-1 stat-card">
                         <div class="card-body text-center">
-                            <i class="fa-solid fa-wallet text-orange fa-2x mb-2"></i>
+                            <i class="fa-solid fa-wallet text-green fa-2x mb-2"></i>
                             <h4 class="text-muted">System PnL</h4>
                             <h2 id="admin-stat-pnl">$0.00</h2>
                         </div>
                     </div>
                 </div>
 
-                <!-- Users Table -->
+                <!-- Live Open Trades -->
+                <div class="glass-panel card mb-4">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-chart-candlestick text-orange"></i> Live Open Trades</h3>
+                        <p class="text-muted">Modify SL/TP or force-close any running position.</p>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Entry</th>
+                                    <th>Stop Loss</th>
+                                    <th>Take Profit</th>
+                                    <th>Qty</th>
+                                    <th>Lev.</th>
+                                    <th>Opened At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-trades-tbody">
+                                <tr><td colspan="10" class="text-center text-muted py-3">No open trades right now.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Users Config Table -->
                 <div class="glass-panel card">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-users-gear"></i> All Users</h3>
+                        <h3><i class="fa-solid fa-users-gear"></i> All Users — Trading Config</h3>
+                        <p class="text-muted">Click <i class="fa-solid fa-sliders"></i> to edit a user's margin type, leverage, timeframe, and risk settings.</p>
                     </div>
                     <div class="card-body table-responsive">
                         <table class="modern-table">
@@ -388,18 +418,20 @@
                                 <tr>
                                     <th>Username</th>
                                     <th>Email</th>
-                                    <th>Mobile</th>
                                     <th>Role</th>
                                     <th>Email ✓</th>
-                                    <th>Mobile ✓</th>
                                     <th>Bot</th>
-                                    <th>Risk%</th>
+                                    <th>Timeframe</th>
+                                    <th>Margin</th>
                                     <th>Leverage</th>
+                                    <th>Risk%</th>
+                                    <th>SL pts</th>
+                                    <th>TP pts</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="admin-users-tbody">
-                                <tr><td colspan="10" class="text-center text-muted py-3">Loading...</td></tr>
+                                <tr><td colspan="12" class="text-center text-muted py-3">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>

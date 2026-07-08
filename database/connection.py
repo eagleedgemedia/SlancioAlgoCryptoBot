@@ -64,6 +64,9 @@ async def init_db_schema():
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS position_size_pct FLOAT DEFAULT 0.02",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_leverage INTEGER DEFAULT 10",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS stop_loss_points FLOAT DEFAULT 400.0",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS take_profit_points FLOAT DEFAULT 800.0",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS margin_type VARCHAR DEFAULT 'isolated'",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS trading_timeframe VARCHAR DEFAULT '1h'",
                 ]
                 for stmt in migrations:
                     try:
