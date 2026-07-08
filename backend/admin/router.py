@@ -97,11 +97,18 @@ async def _delta_request(api_key: str, api_secret: str, method: str, path: str, 
 
 
 async def _get_user_delta_keys(user_id: str, db: AsyncSession):
-    """Fetch and decrypt a user's Delta Exchange API keys."""
-    result = await db.execute(select(ApiKey).where(ApiKey.user_id == user_id))
+    """Fetch and decrypt a user's selected Delta Exchange API keys."""
+    # Try to find the selected key, fallback to the first one if none selected
+    result = await db.execute(select(ApiKey).where(ApiKey.user_id == user_id, ApiKey.is_selected == True))
     key_record = result.scalar_one_or_none()
+    
+    if not key_record:
+        result = await db.execute(select(ApiKey).where(ApiKey.user_id == user_id))
+        key_record = result.scalars().first()
+        
     if not key_record:
         raise HTTPException(status_code=404, detail="User has no API keys configured.")
+        
     try:
         api_key = security.decrypt(key_record.encrypted_api_key)
         api_secret = security.decrypt(key_record.encrypted_api_secret)

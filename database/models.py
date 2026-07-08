@@ -63,6 +63,9 @@ class ApiKey(Base):
     encrypted_api_key: Mapped[str] = mapped_column(String)
     encrypted_api_secret: Mapped[str] = mapped_column(String)
     
+    api_name: Mapped[str] = mapped_column(String, default="Primary API")
+    is_selected: Mapped[bool] = mapped_column(Boolean, default=False)
+    
     exchange: Mapped[str] = mapped_column(String, default="delta_india")
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True)
     

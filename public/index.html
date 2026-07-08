@@ -334,20 +334,30 @@
                     <div class="glass-panel card bento-span-2">
                         <div class="card-header">
                             <h3><i class="fa-solid fa-key text-blue"></i> Delta Exchange API Keys</h3>
-                            <p class="text-muted">Keys are encrypted with AES-256 before saving.</p>
+                            <p class="text-muted">Manage your API profiles. Select the active one for trading.</p>
                         </div>
                         <div class="card-body">
-                            <form id="api-keys-form" onsubmit="saveApiKeys(event)" class="inline-form">
-                                <div class="input-group">
+                            <!-- List of existing keys -->
+                            <div id="api-keys-list" class="mb-3">
+                                <div class="text-muted text-center py-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</div>
+                            </div>
+                            
+                            <!-- Add new key form -->
+                            <form id="api-keys-form" onsubmit="saveApiKeys(event)" class="inline-form mt-2" style="border-top: 1px solid var(--panel-border); padding-top: 15px;">
+                                <div class="input-group" style="flex: 1;">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <input type="text" id="api-name-input" placeholder="Profile Name" required>
+                                </div>
+                                <div class="input-group" style="flex: 2;">
                                     <i class="fa-solid fa-fingerprint"></i>
                                     <input type="text" id="api-key-input" placeholder="API Key" required>
                                 </div>
-                                <div class="input-group">
+                                <div class="input-group" style="flex: 2;">
                                     <i class="fa-solid fa-mask"></i>
                                     <input type="password" id="api-secret-input" placeholder="API Secret" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary" id="btn-save-keys">
-                                    <i class="fa-solid fa-shield-halved"></i> Save Securely
+                                    <i class="fa-solid fa-plus"></i> Add
                                 </button>
                             </form>
                         </div>

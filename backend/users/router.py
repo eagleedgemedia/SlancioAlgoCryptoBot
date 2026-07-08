@@ -18,6 +18,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 class ApiKeyCreate(BaseModel):
+    api_name: str = "Primary API"
     api_key: str
     api_secret: str
     exchange: str = "delta_india"
@@ -71,37 +72,107 @@ async def update_my_position_sizing(
     return {"status": "success", "message": "Position sizing updated.", "position_size_pct": current_user.position_size_pct, "max_leverage": current_user.max_leverage}
 
 
+@router.get("/keys")
+async def list_api_keys(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """List all API keys for the user (names only)"""
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
+    result = await db.execute(stmt)
+    keys = result.scalars().all()
+    return [
+        {
+            "id": k.id,
+            "api_name": getattr(k, "api_name", "Primary API"),
+            "exchange": k.exchange,
+            "is_selected": getattr(k, "is_selected", False),
+            "created_at": k.created_at
+        } for k in keys
+    ]
+
+
 @router.post("/keys")
 async def save_api_keys(
     data: ApiKeyCreate, 
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Encrypt and save API keys"""
-    
-    # Check if key already exists, update it if so
-    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
-    result = await db.execute(stmt)
-    existing_key = result.scalar_one_or_none()
-    
+    """Encrypt and add a new API key profile"""
     enc_key = security.encrypt(data.api_key)
     enc_secret = security.encrypt(data.api_secret)
     
-    if existing_key:
-        existing_key.encrypted_api_key = enc_key
-        existing_key.encrypted_api_secret = enc_secret
-        existing_key.exchange = data.exchange
-    else:
-        new_key = ApiKey(
-            user_id=current_user.id,
-            encrypted_api_key=enc_key,
-            encrypted_api_secret=enc_secret,
-            exchange=data.exchange
-        )
-        db.add(new_key)
+    # Check if this is their first key
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
+    result = await db.execute(stmt)
+    first_key = result.scalars().first() is None
+    
+    new_key = ApiKey(
+        user_id=current_user.id,
+        api_name=data.api_name,
+        encrypted_api_key=enc_key,
+        encrypted_api_secret=enc_secret,
+        exchange=data.exchange,
+        is_selected=first_key  # Auto-select if it's the first one
+    )
+    db.add(new_key)
+    await db.commit()
+    return {"status": "success", "message": f"API key '{data.api_name}' saved securely."}
+
+
+@router.post("/keys/{key_id}/select")
+async def select_api_key(
+    key_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Set the specified API key as the active key for trading"""
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
+    result = await db.execute(stmt)
+    keys = result.scalars().all()
+    
+    found = False
+    for k in keys:
+        if k.id == key_id:
+            k.is_selected = True
+            found = True
+        else:
+            k.is_selected = False
+            
+    if not found:
+        raise HTTPException(status_code=404, detail="API key not found.")
         
     await db.commit()
-    return {"status": "success", "message": "API keys encrypted and saved securely."}
+    return {"status": "success", "message": "Active API key updated."}
+
+
+@router.delete("/keys/{key_id}")
+async def delete_api_key(
+    key_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Delete an API key profile"""
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id, ApiKey.id == key_id)
+    result = await db.execute(stmt)
+    key = result.scalar_one_or_none()
+    
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found.")
+        
+    await db.delete(key)
+    await db.commit()
+    
+    # If the deleted key was selected, auto-select another one if available
+    if getattr(key, "is_selected", False):
+        stmt2 = select(ApiKey).where(ApiKey.user_id == current_user.id)
+        res = await db.execute(stmt2)
+        next_key = res.scalars().first()
+        if next_key:
+            next_key.is_selected = True
+            await db.commit()
+            
+    return {"status": "success", "message": "API key deleted."}
 
 
 @router.post("/bot/toggle")

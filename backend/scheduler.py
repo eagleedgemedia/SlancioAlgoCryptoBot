@@ -93,7 +93,11 @@ async def run_bot_job():
                 logger.warning(f"User {user.username} has bot ON but no API keys. Skipping.")
                 continue
             try:
-                db_keys = user.api_keys[0]
+                # Find selected key or default to first
+                db_keys = next((k for k in user.api_keys if getattr(k, "is_selected", False)), None)
+                if not db_keys:
+                    db_keys = user.api_keys[0]
+                    
                 api_key = security.decrypt(db_keys.encrypted_api_key)
                 api_secret = security.decrypt(db_keys.encrypted_api_secret)
 

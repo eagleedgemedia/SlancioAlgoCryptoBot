@@ -290,6 +290,7 @@ async function loadUserProfile() {
         : '<button class="btn btn-sm btn-ghost" onclick="triggerVerification(\'mobile\')">Verify Now</button>';
 
     loadStats();
+    loadApiKeys();
 }
 
 async function triggerVerification(type) {
@@ -329,18 +330,78 @@ async function toggleBot(e) {
 }
 
 // ─── API KEYS ───
+async function loadApiKeys() {
+    try {
+        const keys = await fetchAPI('/users/keys');
+        const container = document.getElementById('api-keys-list');
+        container.innerHTML = '';
+        
+        if (keys.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center py-2">No API keys saved yet.</div>';
+            return;
+        }
+        
+        keys.forEach(k => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.justifyContent = 'space-between';
+            div.style.padding = '10px';
+            div.style.border = '1px solid var(--panel-border)';
+            div.style.borderRadius = '8px';
+            div.style.marginBottom = '8px';
+            div.style.background = k.is_selected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0,0,0,0.2)';
+            
+            div.innerHTML = `
+                <div>
+                    <strong>${k.api_name}</strong>
+                    <span class="badge ${k.is_selected ? 'badge-green' : 'badge-outline'} ms-2">${k.is_selected ? 'Active' : 'Standby'}</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    ${!k.is_selected ? `<button class="btn btn-sm btn-ghost" onclick="selectApiKey('${k.id}')" title="Set Active"><i class="fa-solid fa-check"></i></button>` : ''}
+                    <button class="btn btn-sm btn-danger-outline" onclick="deleteApiKey('${k.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch(e) {}
+}
+
+async function selectApiKey(id) {
+    try {
+        await fetchAPI(`/users/keys/${id}/select`, { method: 'POST' });
+        showToast('Active API key updated.');
+        loadApiKeys();
+    } catch(e) {}
+}
+
+async function deleteApiKey(id) {
+    if(!confirm('Are you sure you want to delete this API Key?')) return;
+    try {
+        await fetchAPI(`/users/keys/${id}`, { method: 'DELETE' });
+        showToast('API key deleted.');
+        loadApiKeys();
+    } catch(e) {}
+}
+
 async function saveApiKeys(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-save-keys');
     const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Encrypting...';
-    const payload = { api_key: document.getElementById('api-key-input').value, api_secret: document.getElementById('api-secret-input').value, exchange: 'delta_india' };
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Adding...';
+    const payload = { 
+        api_name: document.getElementById('api-name-input').value,
+        api_key: document.getElementById('api-key-input').value, 
+        api_secret: document.getElementById('api-secret-input').value, 
+        exchange: 'delta_india' 
+    };
     try {
         const res = await fetchAPI('/users/keys', { method: 'POST', body: JSON.stringify(payload) });
         showToast(res.message);
+        document.getElementById('api-name-input').value = '';
         document.getElementById('api-key-input').value = '';
         document.getElementById('api-secret-input').value = '';
-        document.getElementById('api-secret-input').placeholder = '•••••••••• (Saved & Encrypted)';
+        loadApiKeys();
     } catch (err) { /* handled */ }
     finally { btn.innerHTML = orig; }
 }
