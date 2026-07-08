@@ -166,22 +166,22 @@ async def get_user_margin_balance(
         if resp.get("success"):
             balances = resp.get("result", [])
             logger.info(f"Wallet balances for user {user_id}: {balances}")
-            # Check for USDT or INR (Delta India)
-            target_balance = next((b for b in balances if b.get("asset_symbol") in ["USDT", "INR"]), None)
-            
-            if target_balance:
-                # Some API versions use 'available_balance', others use 'balance'
-                margin = float(target_balance.get("available_balance", target_balance.get("balance", 0)))
-                return {"status": "success", "available_margin": margin}
-                
-            return {"status": "success", "available_margin": 0.0}
+            inr_margin = 0.0
+            usdt_margin = 0.0
+            for b in balances:
+                if b.get("asset_symbol") == "INR":
+                    inr_margin = float(b.get("available_balance", b.get("balance", 0)))
+                elif b.get("asset_symbol") == "USDT":
+                    usdt_margin = float(b.get("available_balance", b.get("balance", 0)))
+                    
+            return {"status": "success", "margin_inr": inr_margin, "margin_usdt": usdt_margin}
         else:
             logger.error(f"Delta API error for user {user_id}: {resp}")
-            return {"status": "error", "message": "Delta API error", "available_margin": 0.0}
+            return {"status": "error", "message": "Delta API error", "margin_inr": 0.0, "margin_usdt": 0.0}
     except Exception as e:
         logger.warning(f"Could not fetch margin for user {user_id}: {e}")
         # User might not have API keys configured
-        return {"status": "error", "message": str(e), "available_margin": 0.0}
+        return {"status": "error", "message": str(e), "margin_inr": 0.0, "margin_usdt": 0.0}
 
 
 # ─── TOGGLE USER ACTIVE STATUS ───

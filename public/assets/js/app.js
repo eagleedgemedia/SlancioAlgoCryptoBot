@@ -370,7 +370,11 @@ async function loadApiKeys() {
                 if (res.status === 'error') {
                     document.getElementById(`margin-${k.id}`).innerHTML = '<span class="text-danger" style="font-size: 0.8rem;">Invalid Key</span>';
                 } else {
-                    document.getElementById(`margin-${k.id}`).innerText = `${res.available_margin.toFixed(2)} USDT`;
+                    if (res.margin_inr > 0) {
+                        document.getElementById(`margin-${k.id}`).innerHTML = `₹${res.margin_inr.toFixed(2)} <span style="font-size: 0.7em; color: var(--text-muted);">($${res.margin_usdt.toFixed(2)})</span>`;
+                    } else {
+                        document.getElementById(`margin-${k.id}`).innerText = `$${res.margin_usdt.toFixed(2)}`;
+                    }
                 }
             }).catch(e => {
                 const el = document.getElementById(`margin-${k.id}`);
@@ -598,19 +602,40 @@ async function adminEditConfig(userId, username, curPct, curLev, curTf, curSL, c
     document.getElementById('admin-config-subtitle').innerText = `Modify trading parameters for ${username}`;
     
     document.getElementById('ac-tf').value = curTf;
-    document.getElementById('ac-lev').value = curLev;
+    
+    const levSelect = document.getElementById('ac-lev');
+    if (![...levSelect.options].some(o => o.value == curLev)) {
+        const opt = document.createElement('option');
+        opt.value = curLev;
+        opt.text = `${curLev}x (Current)`;
+        levSelect.appendChild(opt);
+    }
+    levSelect.value = curLev;
+    
     document.getElementById('ac-sl').value = curSL;
     document.getElementById('ac-tp').value = curTP;
-    document.getElementById('ac-entry-dist').value = curEntryDist;
+    
+    const distSelect = document.getElementById('ac-entry-dist');
+    if (![...distSelect.options].some(o => o.value == curEntryDist)) {
+        const opt = document.createElement('option');
+        opt.value = curEntryDist;
+        opt.text = `${curEntryDist} points (Current)`;
+        distSelect.appendChild(opt);
+    }
+    distSelect.value = curEntryDist;
     
     document.getElementById('ac-margin-balance').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
     document.getElementById('admin-config-modal').style.display = 'flex';
     
     try {
         const resp = await fetchAPI(`/admin/users/${userId}/balance`);
-        document.getElementById('ac-margin-balance').innerText = resp.available_margin.toFixed(2);
+        if (resp.margin_inr > 0) {
+            document.getElementById('ac-margin-balance').innerHTML = `₹${resp.margin_inr.toFixed(2)} <span style="font-size: 0.7em; color: var(--text-muted);">($${resp.margin_usdt.toFixed(2)})</span>`;
+        } else {
+            document.getElementById('ac-margin-balance').innerHTML = `$${resp.margin_usdt.toFixed(2)}`;
+        }
     } catch(e) {
-        document.getElementById('ac-margin-balance').innerText = '0.00';
+        document.getElementById('ac-margin-balance').innerText = '$0.00';
     }
 }
 

@@ -199,15 +199,20 @@ async def get_key_balance(
         resp = await _delta_request(api_key, api_secret, "GET", "/v2/wallet/balances")
         if resp.get("success"):
             balances = resp.get("result", [])
-            target_balance = next((b for b in balances if b.get("asset_symbol") in ["USDT", "INR"]), None)
-            if target_balance:
-                margin = float(target_balance.get("available_balance", target_balance.get("balance", 0)))
-                return {"status": "success", "available_margin": margin}
+            inr_margin = 0.0
+            usdt_margin = 0.0
+            for b in balances:
+                if b.get("asset_symbol") == "INR":
+                    inr_margin = float(b.get("available_balance", b.get("balance", 0)))
+                elif b.get("asset_symbol") == "USDT":
+                    usdt_margin = float(b.get("available_balance", b.get("balance", 0)))
+                    
+            return {"status": "success", "margin_inr": inr_margin, "margin_usdt": usdt_margin}
                 
-        return {"status": "success", "available_margin": 0.0}
+        return {"status": "success", "margin_inr": 0.0, "margin_usdt": 0.0}
     except Exception as e:
         logger.warning(f"Could not fetch margin for key {key_id}: {e}")
-        return {"status": "error", "available_margin": 0.0}
+        return {"status": "error", "margin_inr": 0.0, "margin_usdt": 0.0}
 
 
 
