@@ -202,10 +202,11 @@ async def get_key_balance(
             inr_margin = 0.0
             usdt_margin = 0.0
             for b in balances:
-                if b.get("asset_symbol") == "INR":
-                    inr_margin = float(b.get("available_balance", b.get("balance", 0)))
-                elif b.get("asset_symbol") == "USDT":
+                if b.get("asset_symbol") in ["USD", "USDT"]:
                     usdt_margin = float(b.get("available_balance", b.get("balance", 0)))
+                    inr_margin = float(b.get("available_balance_inr", b.get("balance_inr", 0)))
+                elif b.get("asset_symbol") == "INR" and inr_margin == 0.0:
+                    inr_margin = float(b.get("available_balance", b.get("balance", 0)))
                     
             return {"status": "success", "margin_inr": inr_margin, "margin_usdt": usdt_margin}
                 
