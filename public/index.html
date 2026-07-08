@@ -78,6 +78,7 @@
             </div>
             <form id="admin-config-form" onsubmit="submitAdminConfig(event)">
                 <input type="hidden" id="ac-userid">
+                <input type="hidden" id="ac-pct">
                 
                 <div class="bento-grid">
                     <div class="form-field bento-span-1">
@@ -101,11 +102,20 @@
                     
                     <div class="form-field bento-span-1 mt-2">
                         <label>Leverage (x)</label>
-                        <input type="number" id="ac-lev" class="input-group" min="1" max="200" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                        <select id="ac-lev" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="1">1x</option>
+                            <option value="25">25x</option>
+                            <option value="50">50x</option>
+                            <option value="100">100x</option>
+                            <option value="150">150x</option>
+                            <option value="200">200x</option>
+                        </select>
                     </div>
                     <div class="form-field bento-span-1 mt-2">
-                        <label>Risk %</label>
-                        <input type="number" id="ac-pct" class="input-group" step="0.1" min="0.1" max="10" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                        <label>Available Margin</label>
+                        <div class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #10b981; border-radius: 8px; font-weight: 600; text-align: center;">
+                            <span id="ac-margin-balance"><i class="fa-solid fa-circle-notch fa-spin"></i></span> USDT
+                        </div>
                     </div>
                     
                     <div class="form-field bento-span-1 mt-2">
@@ -526,7 +536,6 @@
                                     <th>Timeframe</th>
                                     <th>Margin</th>
                                     <th>Leverage</th>
-                                    <th>Risk%</th>
                                     <th>SL pts</th>
                                     <th>TP pts</th>
                                     <th>Entry Dist.</th>

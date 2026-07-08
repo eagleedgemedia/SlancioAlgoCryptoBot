@@ -143,6 +143,31 @@ async def list_all_users(
     ]
 
 
+# ─── GET USER AVAILABLE MARGIN ───
+@router.get("/users/{user_id}/balance")
+async def get_user_margin_balance(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Admin: Fetch user's live USDT balance from Delta Exchange."""
+    try:
+        api_key, api_secret = await _get_user_delta_keys(user_id, db)
+        resp = await _delta_request(api_key, api_secret, "GET", "/v2/wallet/balances")
+        
+        if resp.get("success"):
+            balances = resp.get("result", [])
+            usdt_balance = next((b for b in balances if b.get("asset_symbol") == "USDT"), None)
+            if usdt_balance:
+                return {"status": "success", "available_margin": float(usdt_balance.get("available_balance", 0))}
+            return {"status": "success", "available_margin": 0.0}
+        else:
+            return {"status": "error", "message": "Delta API error", "available_margin": 0.0}
+    except Exception as e:
+        # User might not have API keys configured
+        return {"status": "error", "message": str(e), "available_margin": 0.0}
+
+
 # ─── TOGGLE USER ACTIVE STATUS ───
 @router.post("/users/{user_id}/toggle-active")
 async def toggle_user_active(

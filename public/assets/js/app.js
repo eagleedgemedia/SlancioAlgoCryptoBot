@@ -482,7 +482,6 @@ async function loadAdminUsers() {
                 <td><code>${tf}</code></td>
                 <td>${marginBadge}</td>
                 <td><strong>${lev}x</strong></td>
-                <td>${pct}%</td>
                 <td>${sl}</td>
                 <td>${tp}</td>
                 <td><strong>${entryDist}</strong></td>
@@ -536,19 +535,27 @@ async function adminCloseTrade(tradeId, username, symbol) {
     } catch(e) {}
 }
 
-function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
+async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
     document.getElementById('ac-userid').value = userId;
+    document.getElementById('ac-pct').value = curPct;
     document.getElementById('admin-config-subtitle').innerText = `Modify trading parameters for ${username}`;
     
     document.getElementById('ac-tf').value = curTf;
     document.getElementById('ac-margin').value = curMargin;
     document.getElementById('ac-lev').value = curLev;
-    document.getElementById('ac-pct').value = curPct;
     document.getElementById('ac-sl').value = curSL;
     document.getElementById('ac-tp').value = curTP;
     document.getElementById('ac-entry-dist').value = curEntryDist;
     
+    document.getElementById('ac-margin-balance').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
     document.getElementById('admin-config-modal').style.display = 'flex';
+    
+    try {
+        const resp = await fetchAPI(`/admin/users/${userId}/balance`);
+        document.getElementById('ac-margin-balance').innerText = resp.available_margin.toFixed(2);
+    } catch(e) {
+        document.getElementById('ac-margin-balance').innerText = '0.00';
+    }
 }
 
 function closeAdminConfigModal() {
