@@ -482,38 +482,47 @@ async function adminCloseTrade(tradeId, username, symbol) {
     } catch(e) {}
 }
 
-async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
-    // Build a form-like prompt sequence
-    const tf = prompt(`Timeframe for ${username} (1m/5m/15m/1h/4h/1d) [current: ${curTf}]:`, curTf);
-    if (!tf) return;
-    const margin = prompt(`Margin type (isolated/cross) [current: ${curMargin}]:`, curMargin);
-    if (!margin) return;
-    const lev = prompt(`Max Leverage (1-200x) [current: ${curLev}x]:`, curLev);
-    if (!lev) return;
-    const pct = prompt(`Risk per trade % (0.1-10) [current: ${curPct}%]:`, curPct);
-    if (!pct) return;
-    const sl = prompt(`Stop Loss points [current: ${curSL}]:`, curSL);
-    if (!sl) return;
-    const tp = prompt(`Take Profit points [current: ${curTP}]:`, curTP);
-    if (!tp) return;
-    const entryDist = prompt(`Entry Conditions Distance from EMA 7 Low (25, 50, 100, 150, 200) [current: ${curEntryDist}]:`, curEntryDist);
-    if (!entryDist) return;
+function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
+    document.getElementById('ac-userid').value = userId;
+    document.getElementById('admin-config-subtitle').innerText = `Modify trading parameters for ${username}`;
+    
+    document.getElementById('ac-tf').value = curTf;
+    document.getElementById('ac-margin').value = curMargin;
+    document.getElementById('ac-lev').value = curLev;
+    document.getElementById('ac-pct').value = curPct;
+    document.getElementById('ac-sl').value = curSL;
+    document.getElementById('ac-tp').value = curTP;
+    document.getElementById('ac-entry-dist').value = curEntryDist;
+    
+    document.getElementById('admin-config-modal').style.display = 'flex';
+}
 
+function closeAdminConfigModal() {
+    document.getElementById('admin-config-modal').style.display = 'none';
+}
+
+async function submitAdminConfig(e) {
+    e.preventDefault();
+    const userId = document.getElementById('ac-userid').value;
+    
     try {
         const resp = await fetchAPI(`/admin/users/${userId}/trading-config`, {
             method: 'PUT',
             body: JSON.stringify({
-                trading_timeframe: tf.trim(),
-                margin_type: margin.trim().toLowerCase(),
-                max_leverage: parseInt(lev),
-                position_size_pct: parseFloat(pct) / 100,
-                stop_loss_points: parseFloat(sl),
-                take_profit_points: parseFloat(tp),
-                ema_distance_points: parseInt(entryDist),
+                trading_timeframe: document.getElementById('ac-tf').value,
+                margin_type: document.getElementById('ac-margin').value,
+                max_leverage: parseInt(document.getElementById('ac-lev').value),
+                position_size_pct: parseFloat(document.getElementById('ac-pct').value) / 100,
+                stop_loss_points: parseFloat(document.getElementById('ac-sl').value),
+                take_profit_points: parseFloat(document.getElementById('ac-tp').value),
+                ema_distance_points: parseInt(document.getElementById('ac-entry-dist').value),
             })
         });
-        showToast(`Config saved for ${username}! Delta: ${resp.delta_exchange_status}`);
+        showToast(`Config saved successfully! Delta Status: ${resp.delta_exchange_status}`);
+        closeAdminConfigModal();
         loadAdminUsers();
-    } catch(e) {}
+    } catch(err) {
+        // fetchAPI already handles showing error toasts
+    }
 }
 

@@ -47,6 +47,77 @@
         </div>
     </div>
 
+    <!-- Admin Config Edit Modal -->
+    <div id="admin-config-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-sliders fa-3x text-orange mb-3"></i>
+                <h2>Edit User Config</h2>
+                <p id="admin-config-subtitle" class="text-muted">Modify trading parameters for user</p>
+            </div>
+            <form id="admin-config-form" onsubmit="submitAdminConfig(event)">
+                <input type="hidden" id="ac-userid">
+                
+                <div class="bento-grid">
+                    <div class="form-field bento-span-1">
+                        <label>Timeframe</label>
+                        <select id="ac-tf" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="1m">1m</option>
+                            <option value="5m">5m</option>
+                            <option value="15m">15m</option>
+                            <option value="1h">1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
+                        </select>
+                    </div>
+                    <div class="form-field bento-span-1">
+                        <label>Margin Type</label>
+                        <select id="ac-margin" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="isolated">Isolated</option>
+                            <option value="cross">Cross</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-field bento-span-1 mt-2">
+                        <label>Leverage (x)</label>
+                        <input type="number" id="ac-lev" class="input-group" min="1" max="200" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    </div>
+                    <div class="form-field bento-span-1 mt-2">
+                        <label>Risk %</label>
+                        <input type="number" id="ac-pct" class="input-group" step="0.1" min="0.1" max="10" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    </div>
+                    
+                    <div class="form-field bento-span-1 mt-2">
+                        <label>Stop Loss (pts)</label>
+                        <input type="number" id="ac-sl" class="input-group" step="1" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    </div>
+                    <div class="form-field bento-span-1 mt-2">
+                        <label>Take Profit (pts)</label>
+                        <input type="number" id="ac-tp" class="input-group" step="1" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    </div>
+
+                    <div class="form-field bento-span-2 mt-2">
+                        <label>Entry Condition Distance (from EMA 7 Low)</label>
+                        <select id="ac-entry-dist" class="input-group" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="25">25 points</option>
+                            <option value="50">50 points</option>
+                            <option value="100">100 points</option>
+                            <option value="150">150 points</option>
+                            <option value="200">200 points</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fa-solid fa-floppy-disk"></i> Save & Apply to Delta
+                    </button>
+                    <button type="button" class="btn btn-ghost w-100 mt-2" onclick="closeAdminConfigModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Background Effects -->
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
