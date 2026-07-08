@@ -1,0 +1,15 @@
+name: Keep Alive Ping
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Server
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" https://slancioalgotradebot.onrender.com/api/health
