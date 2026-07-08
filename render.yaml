@@ -21,3 +21,5 @@ services:
         value: gd7OZsrrwzumb8StxSTS84yW32SWJM
       - key: DELTA_API_SECRET
         value: VBkoT8dOku1qXnWieMHLwABmwvCEDfe9FI3eTo9TAg8KJY9J5GOEqFcq4Pnt
+      - key: RENDER_EXTERNAL_URL
+        value: https://slancioalgotradebot.onrender.com

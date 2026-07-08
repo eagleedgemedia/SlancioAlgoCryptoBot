@@ -5,11 +5,15 @@ Combines the backend API and serves the frontend Web App.
 """
 
 import os
+import time
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from loguru import logger
+
+_START_TIME = time.time()
 
 from core.config import get_settings
 from backend.auth.router import router as auth_router
@@ -50,8 +54,17 @@ async def startup_event():
 
 @app.get("/api/health")
 async def health_check():
-    """Endpoint for Render/Uptime monitors to ping every 10 mins"""
-    return {"status": "healthy", "engine": "running"}
+    """Endpoint for Render uptime monitors and self keep-alive pings."""
+    uptime_seconds = int(time.time() - _START_TIME)
+    hours, rem = divmod(uptime_seconds, 3600)
+    mins, secs = divmod(rem, 60)
+    return {
+        "status": "healthy",
+        "engine": "running",
+        "uptime": f"{hours}h {mins}m {secs}s",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "scheduler": "active",
+    }
 
 
 # ── UNIFIED RENDER DEPLOYMENT ──

@@ -415,6 +415,7 @@ async function loadAdminUsers() {
             const margin = u.margin_type || 'isolated';
             const sl = u.stop_loss_points || 400;
             const tp = u.take_profit_points || 800;
+            const entryDist = u.ema_distance_points ?? 200;
             const marginBadge = margin === 'isolated'
                 ? '<span class="badge badge-outline">Isolated</span>'
                 : '<span class="badge badge-green">Cross</span>';
@@ -430,9 +431,10 @@ async function loadAdminUsers() {
                 <td>${pct}%</td>
                 <td>${sl}</td>
                 <td>${tp}</td>
+                <td><strong>${entryDist}</strong></td>
                 <td>
                     <button class="btn btn-sm btn-ghost" title="Edit Trading Config"
-                        onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}','${margin}',${sl},${tp})">
+                        onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}','${margin}',${sl},${tp},${entryDist})">
                         <i class="fa-solid fa-sliders"></i> Edit
                     </button>
                     <button class="btn btn-sm btn-danger-outline" title="${u.is_active ? 'Disable User' : 'Enable User'}"
@@ -480,7 +482,7 @@ async function adminCloseTrade(tradeId, username, symbol) {
     } catch(e) {}
 }
 
-async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP) {
+async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargin, curSL, curTP, curEntryDist) {
     // Build a form-like prompt sequence
     const tf = prompt(`Timeframe for ${username} (1m/5m/15m/1h/4h/1d) [current: ${curTf}]:`, curTf);
     if (!tf) return;
@@ -494,6 +496,8 @@ async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargi
     if (!sl) return;
     const tp = prompt(`Take Profit points [current: ${curTP}]:`, curTP);
     if (!tp) return;
+    const entryDist = prompt(`Entry Conditions Distance from EMA 7 Low (25, 50, 100, 150, 200) [current: ${curEntryDist}]:`, curEntryDist);
+    if (!entryDist) return;
 
     try {
         const resp = await fetchAPI(`/admin/users/${userId}/trading-config`, {
@@ -505,6 +509,7 @@ async function adminEditConfig(userId, username, curPct, curLev, curTf, curMargi
                 position_size_pct: parseFloat(pct) / 100,
                 stop_loss_points: parseFloat(sl),
                 take_profit_points: parseFloat(tp),
+                ema_distance_points: parseInt(entryDist),
             })
         });
         showToast(`Config saved for ${username}! Delta: ${resp.delta_exchange_status}`);

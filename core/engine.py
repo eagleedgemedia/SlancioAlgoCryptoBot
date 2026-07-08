@@ -20,11 +20,21 @@ from core.exchange.position_manager import PositionManager
 
 
 class TradingEngine:
-    def __init__(self, api_key: str = None, api_secret: str = None):
+    def __init__(
+        self, 
+        api_key: str = None, 
+        api_secret: str = None, 
+        user_id: str = None,
+        stop_loss_points: float = 400.0,
+        ema_distance_points: int = 200
+    ):
         self.settings = get_settings()
         self.client = DeltaExchangeClient(api_key=api_key, api_secret=api_secret)
         self.data_feed = DataFeed(client=self.client)
-        self.signal_generator = SignalGenerator()
+        self.signal_generator = SignalGenerator(
+            stop_loss_points=stop_loss_points,
+            min_distance_ema_low=ema_distance_points
+        )
         self.position_sizer = PositionSizer(client=self.client)
         self.order_manager = OrderManager(client=self.client)
         self.position_manager = PositionManager()
@@ -32,7 +42,8 @@ class TradingEngine:
         self.symbol = self.settings.trading_symbol
         self.resolution = self.settings.trading_timeframe
         
-        logger.info(f"⚙️ Engine Initialized | Symbol: {self.symbol} | Mode: {'DRY RUN' if self.settings.dry_run else 'LIVE'}")
+        mode = 'DRY RUN' if self.settings.dry_run else 'LIVE'
+        logger.info(f"⚙️ Engine Initialized | User: {user_id} | Symbol: {self.symbol} | Mode: {mode}")
 
     def run_candle_cycle(self):
         """

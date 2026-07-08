@@ -50,6 +50,7 @@ class PositionSizingUpdate(BaseModel):
     take_profit_points: Optional[float] = None
     margin_type: Optional[str] = None           # 'isolated' or 'cross'
     trading_timeframe: Optional[str] = None     # '1m','5m','15m','1h','4h'
+    ema_distance_points: Optional[int] = None   # Points above EMA 7 Low for entry
 
 class ModifyTradeRequest(BaseModel):
     stop_loss: Optional[float] = None
@@ -135,6 +136,7 @@ async def list_all_users(
             "take_profit_points": getattr(u, "take_profit_points", 800.0),
             "margin_type": getattr(u, "margin_type", "isolated"),
             "trading_timeframe": getattr(u, "trading_timeframe", "1h"),
+            "ema_distance_points": getattr(u, "ema_distance_points", 200),
             "created_at": u.created_at,
         }
         for u in users
@@ -203,6 +205,9 @@ async def update_user_trading_config(
             raise HTTPException(status_code=400, detail=f"Timeframe must be one of: {VALID_TIMEFRAMES}")
         user.trading_timeframe = data.trading_timeframe
 
+    if data.ema_distance_points is not None:
+        user.ema_distance_points = data.ema_distance_points
+
     await db.commit()
 
     delta_status = "not_applied"
@@ -240,6 +245,7 @@ async def update_user_trading_config(
         "take_profit_points": getattr(user, "take_profit_points", 800.0),
         "margin_type": getattr(user, "margin_type", "isolated"),
         "trading_timeframe": getattr(user, "trading_timeframe", "1h"),
+        "ema_distance_points": getattr(user, "ema_distance_points", 200),
         "delta_exchange_status": delta_status,
     }
 

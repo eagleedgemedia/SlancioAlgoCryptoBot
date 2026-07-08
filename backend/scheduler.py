@@ -102,6 +102,8 @@ async def run_bot_job():
                     api_key=api_key,
                     api_secret=api_secret,
                     user_id=user.id,
+                    stop_loss_points=user.stop_loss_points,
+                    ema_distance_points=getattr(user, "ema_distance_points", 200)
                 )
                 logger.info(f"🚀 Running engine for user: {user.username}")
                 await asyncio.to_thread(engine.run_candle_cycle)
