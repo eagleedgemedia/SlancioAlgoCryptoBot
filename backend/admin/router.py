@@ -150,20 +150,28 @@ async def get_user_margin_balance(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Admin: Fetch user's live USDT balance from Delta Exchange."""
+    """Admin: Fetch user's live margin balance from Delta Exchange."""
     try:
         api_key, api_secret = await _get_user_delta_keys(user_id, db)
         resp = await _delta_request(api_key, api_secret, "GET", "/v2/wallet/balances")
         
         if resp.get("success"):
             balances = resp.get("result", [])
-            usdt_balance = next((b for b in balances if b.get("asset_symbol") == "USDT"), None)
-            if usdt_balance:
-                return {"status": "success", "available_margin": float(usdt_balance.get("available_balance", 0))}
+            logger.info(f"Wallet balances for user {user_id}: {balances}")
+            # Check for USDT or INR (Delta India)
+            target_balance = next((b for b in balances if b.get("asset_symbol") in ["USDT", "INR"]), None)
+            
+            if target_balance:
+                # Some API versions use 'available_balance', others use 'balance'
+                margin = float(target_balance.get("available_balance", target_balance.get("balance", 0)))
+                return {"status": "success", "available_margin": margin}
+                
             return {"status": "success", "available_margin": 0.0}
         else:
+            logger.error(f"Delta API error for user {user_id}: {resp}")
             return {"status": "error", "message": "Delta API error", "available_margin": 0.0}
     except Exception as e:
+        logger.warning(f"Could not fetch margin for user {user_id}: {e}")
         # User might not have API keys configured
         return {"status": "error", "message": str(e), "available_margin": 0.0}
 
