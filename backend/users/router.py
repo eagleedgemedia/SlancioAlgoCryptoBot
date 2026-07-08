@@ -175,6 +175,42 @@ async def delete_api_key(
     return {"status": "success", "message": "API key deleted."}
 
 
+@router.get("/keys/{key_id}/balance")
+async def get_key_balance(
+    key_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Fetch live margin balance for a specific API key"""
+    from backend.admin.router import _delta_request
+    from loguru import logger
+    
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id, ApiKey.id == key_id)
+    result = await db.execute(stmt)
+    key = result.scalar_one_or_none()
+    
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found.")
+        
+    try:
+        api_key = security.decrypt(key.encrypted_api_key)
+        api_secret = security.decrypt(key.encrypted_api_secret)
+        
+        resp = await _delta_request(api_key, api_secret, "GET", "/v2/wallet/balances")
+        if resp.get("success"):
+            balances = resp.get("result", [])
+            target_balance = next((b for b in balances if b.get("asset_symbol") in ["USDT", "INR"]), None)
+            if target_balance:
+                margin = float(target_balance.get("available_balance", target_balance.get("balance", 0)))
+                return {"status": "success", "available_margin": margin}
+                
+        return {"status": "success", "available_margin": 0.0}
+    except Exception as e:
+        logger.warning(f"Could not fetch margin for key {key_id}: {e}")
+        return {"status": "error", "available_margin": 0.0}
+
+
+
 @router.post("/bot/toggle")
 async def toggle_bot(
     data: BotToggle, 
