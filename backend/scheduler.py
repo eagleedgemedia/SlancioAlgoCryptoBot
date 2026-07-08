@@ -1,70 +1,145 @@
 """
 Slancio Crypto Algo Treding Engine — Background Scheduler
 ===========================================================
-Automatically triggers the bot logic precisely every hour.
+- Runs trading bot logic every hour at :00:05
+- Pings /api/health every 10 minutes to keep Render free-tier alive
+- Sends Telegram heartbeat alert every 6 hours to confirm bot is alive
 """
 
 import asyncio
+import httpx
+from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from database.connection import AsyncSessionLocal
 from core.security import security
 from database.models import User, ApiKey
 from core.engine import TradingEngine
+from core.config import get_settings
 
+settings = get_settings()
 scheduler = AsyncIOScheduler()
 
+# ─── Self-Ping to Keep Render Free Tier Alive ───
+async def keep_alive_ping():
+    """
+    Pings the app's own /api/health endpoint every 5 minutes.
+    Render free tier spins down after 15 minutes of inactivity. Internal pings don't work,
+    so we MUST hit the external URL to route through Render's load balancer.
+    """
+    import os
+    # Prefer the specific URL, fallback to env var
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://slancioalgotradebot.onrender.com")
+
+    try:
+        # Don't verify SSL in case of temporary cert issues, use external URL
+        async with httpx.AsyncClient(timeout=10, verify=False) as client:
+            resp = await client.get(f"{render_url}/api/health")
+            logger.info(f"🏓 Keep-alive ping → {resp.status_code} | Server is awake at {render_url}")
+    except Exception as e:
+        logger.warning(f"⚠️ Keep-alive ping failed: {e}")
+
+
+# ─── Telegram Heartbeat Alert ───
+async def send_heartbeat():
+    """Send a Telegram message every 6 hours confirming the bot is alive."""
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+    try:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        msg = (
+            f"💚 *Slancio Algo Engine — Heartbeat*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🕐 Time: `{now}`\n"
+            f"🟢 Status: *ONLINE & RUNNING*\n"
+            f"🤖 Scheduler: Active\n"
+            f"🗄️ Database: Connected\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"_Auto-heartbeat every 6 hours_"
+        )
+        url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(url, json={
+                "chat_id": settings.telegram_chat_id,
+                "text": msg,
+                "parse_mode": "Markdown"
+            })
+        logger.info("💚 Telegram heartbeat sent.")
+    except Exception as e:
+        logger.warning(f"Heartbeat send failed: {e}")
+
+
+# ─── Main Bot Trading Cycle ───
 async def run_bot_job():
     logger.info("⏰ Hourly Scheduler Triggered: Running Slancio Engine Cycle...")
-    
-    # 1. Check if ANY user has the bot toggled ON via the Dashboard
+
     async with AsyncSessionLocal() as session:
-        # Get active users who have bot_enabled=True and join with their API Keys
-        from sqlalchemy.orm import selectinload
-        stmt = select(User).where(User.bot_enabled == True).options(selectinload(User.api_keys))
+        stmt = select(User).where(
+            (User.bot_enabled == True) &
+            (User.is_active == True)
+        ).options(selectinload(User.api_keys))
         result = await session.execute(stmt)
         active_users = result.scalars().all()
-        
+
         if not active_users:
-            logger.info("⏸️ Engine is paused in the dashboard for all users. Skipping this hour.")
+            logger.info("⏸️ No active users with bot enabled. Skipping cycle.")
             return
 
-        # For multi-tenant, we would loop over all active_users. 
-        # For now, we just take the first one (admin).
-        user = active_users[0]
-        if not user.api_keys:
-            logger.error(f"❌ User {user.email} has bot enabled but no API keys saved! Skipping.")
-            return
-            
-        db_keys = user.api_keys[0]
-        try:
-            api_key = security.decrypt(db_keys.encrypted_api_key)
-            api_secret = security.decrypt(db_keys.encrypted_api_secret)
-        except Exception as e:
-            logger.error(f"❌ Failed to decrypt API keys for {user.email}. Are they corrupted? {e}")
-            return
+        for user in active_users:
+            if not user.api_keys:
+                logger.warning(f"User {user.username} has bot ON but no API keys. Skipping.")
+                continue
+            try:
+                db_keys = user.api_keys[0]
+                api_key = security.decrypt(db_keys.encrypted_api_key)
+                api_secret = security.decrypt(db_keys.encrypted_api_secret)
 
-    # 2. Run the heavy trading logic in a background thread 
-    # (so we don't block the FastAPI web server from responding to clicks)
-    engine = TradingEngine(api_key=api_key, api_secret=api_secret)
-    
-    try:
-        await asyncio.to_thread(engine.run_candle_cycle)
-    except Exception as e:
-        logger.error(f"❌ Critical Error during bot cycle: {e}")
+                # Use user's personal settings
+                engine = TradingEngine(
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    user_id=user.id,
+                )
+                logger.info(f"🚀 Running engine for user: {user.username}")
+                await asyncio.to_thread(engine.run_candle_cycle)
+
+            except Exception as e:
+                logger.error(f"❌ Engine error for {user.username}: {e}")
 
 
+# ─── Scheduler Startup ───
 def start_scheduler():
-    """Initializes and starts the background cron job"""
-    if not scheduler.running:
-        # We trigger at minute=0 and second=5 (e.g. 13:00:05).
-        # We add 5 seconds to guarantee Delta Exchange has published the new closed candle.
-        scheduler.add_job(run_bot_job, 'cron', minute=0, second=5, id='hourly_bot_cycle')
-        
-        # For testing right now, let's also run it once immediately if desired, 
-        # but in production we only want the cron job.
-        
-        scheduler.start()
-        logger.success("⏱️ Background APScheduler started! Slancio Engine is now fully autonomous.")
+    """Initialize APScheduler with all jobs."""
+    if scheduler.running:
+        return
+
+    # 1. Main trading cycle — every hour at :00:05
+    scheduler.add_job(
+        run_bot_job, 'cron',
+        minute=0, second=5,
+        id='hourly_bot_cycle',
+        name='Hourly Trading Cycle',
+        misfire_grace_time=60
+    )
+
+    # 2. Keep-alive self-ping — every 5 minutes
+    scheduler.add_job(
+        keep_alive_ping, 'interval',
+        minutes=5,
+        id='keep_alive',
+        name='Render Keep-Alive Ping',
+    )
+
+    # 3. Telegram heartbeat — every 6 hours
+    scheduler.add_job(
+        send_heartbeat, 'interval',
+        hours=6,
+        id='heartbeat',
+        name='Telegram Heartbeat',
+    )
+
+    scheduler.start()
+    logger.success("⏱️ APScheduler started with 3 jobs: Trading | Keep-Alive | Heartbeat")
