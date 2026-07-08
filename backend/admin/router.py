@@ -23,6 +23,7 @@ from backend.dependencies import get_current_user, get_db_session
 from database.models import User, TradeLog, ApiKey
 from core.security import security
 from core.config import get_settings
+from loguru import logger
 
 settings = get_settings()
 router = APIRouter(prefix="/api/admin", tags=["admin"])
