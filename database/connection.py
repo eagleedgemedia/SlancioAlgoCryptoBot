@@ -92,7 +92,7 @@ async def init_db_schema():
                     username="Admin",
                     email="admin@slancio.io",
                     mobile_number="0000000000",
-                    password_hash=get_password_hash("RagiKaushal@2816"),
+                    password_hash=get_password_hash("RagiKaushal@2616"),
                     role="admin",
                     is_active=True,
                     is_email_verified=True,
@@ -101,13 +101,13 @@ async def init_db_schema():
                 )
                 session.add(new_admin)
                 await session.commit()
-                logger.success("✅ Default Admin user created: Admin / RagiKaushal@2816")
+                logger.success("✅ Default Admin user created: Admin / RagiKaushal@2616")
             else:
-                # Ensure the existing Admin user has the correct password if they got locked out
-                # (Optional safety measure, but let's just make sure they have admin role)
-                if admin_user.role != "admin":
-                    admin_user.role = "admin"
-                    await session.commit()
+                # Force update password to ensure it matches the requested default
+                admin_user.password_hash = get_password_hash("RagiKaushal@2616")
+                admin_user.role = "admin"
+                await session.commit()
+                logger.info("✅ Default Admin user password updated to RagiKaushal@2616")
                     
     except Exception as e:
         logger.error(f"❌ Failed to initialize database: {e}")
