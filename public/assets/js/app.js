@@ -113,6 +113,8 @@ async function handleRegister(e) {
 }
 
 // ─── FORGOT PASSWORD ───
+let _resetContext = null;
+
 async function handleForgotPassword(e) {
     e.preventDefault();
     const identifier = document.getElementById('forgot-identifier').value.trim();
@@ -126,20 +128,40 @@ async function handleForgotPassword(e) {
         });
         showToast(`OTP sent to ${identifier}`);
         showOTPModal(identifier, 'forgot_password', (otp) => {
-            // After OTP verified, prompt new password
-            const newPwd = prompt('OTP verified! Enter your new password:');
-            if (!newPwd || newPwd.length < 8) { showToast('Password must be at least 8 characters.', 'error'); return; }
-            fetchAPI('/auth/reset-password', {
-                method: 'POST',
-                body: JSON.stringify({ identifier, otp_code: otp, new_password: newPwd }),
-                noAuth: true
-            }).then(() => {
-                showToast('Password reset! Please login.');
-                switchAuthTab('login');
-            });
+            // After OTP verified, show custom Reset Password Modal instead of ugly prompt
+            _resetContext = { identifier, otp };
+            document.getElementById('new-password-input').value = '';
+            document.getElementById('reset-password-modal').style.display = 'flex';
         }, true); // true = return raw OTP to callback
     } catch (err) { /* handled */ }
     finally { btn.innerHTML = '<span>Send OTP</span> <i class="fa-solid fa-paper-plane"></i>'; }
+}
+
+function closeResetPasswordModal() {
+    document.getElementById('reset-password-modal').style.display = 'none';
+    _resetContext = null;
+}
+
+async function submitNewPassword(e) {
+    e.preventDefault();
+    if (!_resetContext) return;
+    
+    const newPwd = document.getElementById('new-password-input').value;
+    if (newPwd.length < 8) { showToast('Password must be at least 8 characters.', 'error'); return; }
+    
+    const { identifier, otp } = _resetContext;
+    
+    try {
+        await fetchAPI('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ identifier, otp_code: otp, new_password: newPwd }),
+            noAuth: true
+        });
+        showToast('Password reset! Please login.', 'success');
+        closeResetPasswordModal();
+        switchAuthTab('login');
+        document.getElementById('login-username').value = identifier;
+    } catch(err) { /* Toast already handled by fetchAPI */ }
 }
 
 // ─── OTP MODAL ───
