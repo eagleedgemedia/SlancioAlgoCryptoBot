@@ -546,15 +546,16 @@ async function loadAdminUsers() {
                 <td>${sl}</td>
                 <td>${tp}</td>
                 <td><strong>${entryDist}</strong></td>
-                <td>
                     <button class="btn btn-sm btn-ghost" title="Edit Trading Config"
                         onclick="adminEditConfig('${u.id}','${u.username}',${pct},${lev},'${tf}',${sl},${tp},${entryDist})">
                         <i class="fa-solid fa-sliders"></i> Edit
                     </button>
+                    ${u.role !== 'admin' ? `
                     <button class="btn btn-sm btn-danger-outline" title="${u.is_active ? 'Disable User' : 'Enable User'}"
                         onclick="adminToggleUser('${u.id}')">
                         ${u.is_active ? '<i class="fa-solid fa-ban"></i>' : '<i class="fa-solid fa-check"></i>'}
                     </button>
+                    ` : ''}
                 </td>
             `;
             tbody.appendChild(row);
