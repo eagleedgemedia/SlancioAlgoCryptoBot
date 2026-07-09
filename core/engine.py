@@ -160,9 +160,9 @@ class TradingEngine:
                 f"🛑 Stoploss: `{signal.stop_loss:.2f}`\n"
                 f"✅ Target: `{signal.take_profit:.2f}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💸 Margin Required: `{margin_required:.2f} USDT`\n"
-                f"📉 SL Risk Amount: `-{sl_amount:.2f} USDT`\n"
-                f"📈 Target Reward: `+{tp_amount:.2f} USDT`\n"
+                f"💸 Margin Required: `{margin_required:.2f} USDT` (₹{margin_required * 89.0:,.2f})\n"
+                f"📉 SL Risk Amount: `-{sl_amount:.2f} USDT` (₹-{sl_amount * 89.0:,.2f})\n"
+                f"📈 Target Reward: `+{tp_amount:.2f} USDT` (₹+{tp_amount * 89.0:,.2f})\n"
                 f"📊 Conditions: `Liquidity Sweep + MTF Trend Alignment`\n"
             )
             self._send_telegram_alert(msg)
@@ -220,7 +220,7 @@ class TradingEngine:
                 f"🏁 Exit: `{exit_price:.2f}`\n"
                 f"🔔 Reason: `{reason}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💵 Realized PnL: `{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt:.2f} USDT`\n"
+                f"💵 Realized PnL: `{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt:.2f} USDT` (₹{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt * 89.0:,.2f})\n"
             )
             self._send_telegram_alert(msg)
             
