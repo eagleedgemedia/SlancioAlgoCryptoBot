@@ -66,9 +66,9 @@ def _delta_sign(api_secret: str, method: str, path: str, query: str, body: str, 
     message = method + str(timestamp) + path + query + body
     return hmac.new(api_secret.encode(), message.encode(), hashlib.sha256).hexdigest()
 
-async def _delta_request(api_key: str, api_secret: str, method: str, path: str, body: dict = None) -> dict:
-    """Make authenticated request to Delta Exchange India."""
-    timestamp = int(time.time())
+async def _delta_request(api_key: str, api_secret: str, method: str, path: str, body: dict = None, time_offset: int = 0) -> dict:
+    """Make authenticated request to Delta Exchange India with dynamic time synchronization."""
+    timestamp = int(time.time()) + time_offset
     body_str = "" if not body else str(body).replace("'", '"').replace("True", "true").replace("False", "false")
     signature = hmac.new(
         api_secret.encode(),
@@ -83,6 +83,7 @@ async def _delta_request(api_key: str, api_secret: str, method: str, path: str, 
         "Content-Type": "application/json",
     }
     url = f"{DELTA_INDIA_BASE}{path}"
+    
     async with httpx.AsyncClient(timeout=10) as client:
         if method == "GET":
             resp = await client.get(url, headers=headers)
@@ -94,7 +95,21 @@ async def _delta_request(api_key: str, api_secret: str, method: str, path: str, 
             resp = await client.delete(url, headers=headers, json=body)
         else:
             raise ValueError(f"Unsupported method: {method}")
-    return resp.json()
+            
+        data = resp.json()
+        
+        # Auto-sync clock drift if signature expired
+        if not data.get("success") and data.get("error", {}).get("code") == "expired_signature" and time_offset == 0:
+            context = data.get("error", {}).get("context", {})
+            server_time = context.get("server_time")
+            request_time = context.get("request_time")
+            if server_time and request_time:
+                # Calculate the exact offset needed and retry once
+                drift = server_time - request_time
+                logger.info(f"Clock drift detected. Retrying Delta API with offset: {drift}s")
+                return await _delta_request(api_key, api_secret, method, path, body, time_offset=drift)
+                
+        return data
 
 
 async def _get_user_delta_keys(user_id: str, db: AsyncSession):
