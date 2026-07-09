@@ -29,6 +29,10 @@ class TradingEngine:
         ema_distance_points: int = 200
     ):
         self.settings = get_settings()
+        self.symbol = self.settings.trading_symbol
+        self.resolution = self.settings.trading_timeframe
+        self.is_dry_run = self.settings.dry_run or not api_key
+        
         self.client = DeltaExchangeClient(api_key=api_key, api_secret=api_secret)
         self.data_feed = DataFeed(client=self.client)
         self.signal_generator = SignalGenerator(
@@ -36,13 +40,10 @@ class TradingEngine:
             min_distance_ema_low=ema_distance_points
         )
         self.position_sizer = PositionSizer(client=self.client)
-        self.order_manager = OrderManager(client=self.client)
+        self.order_manager = OrderManager(client=self.client, is_dry_run=self.is_dry_run)
         self.position_manager = PositionManager()
         
-        self.symbol = self.settings.trading_symbol
-        self.resolution = self.settings.trading_timeframe
-        
-        mode = 'DRY RUN' if self.settings.dry_run else 'LIVE'
+        mode = 'DRY RUN' if self.is_dry_run else 'LIVE'
         logger.info(f"⚙️ Engine Initialized | User: {user_id} | Symbol: {self.symbol} | Mode: {mode}")
 
     def run_candle_cycle(self):
@@ -103,7 +104,7 @@ class TradingEngine:
     def _execute_entry(self, signal):
         """Handle position sizing and order placement for a new signal"""
         # A. Fetch Balances
-        if self.settings.dry_run:
+        if self.is_dry_run:
             available_balance = 10000.0  # Mock 10k USDT balance for paper trading
             logger.info(f"💸 Paper Trading Balance: {available_balance} USDT")
         else:

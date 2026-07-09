@@ -15,10 +15,10 @@ from core.strategy.signals import TradeSignal
 
 
 class OrderManager:
-    def __init__(self, client: DeltaExchangeClient = None):
+    def __init__(self, client: DeltaExchangeClient = None, is_dry_run: bool = False):
         self.settings = get_settings()
         self.client = client
-        self.is_dry_run = self.settings.dry_run
+        self.is_dry_run = is_dry_run or self.settings.dry_run
 
     def _get_product_id(self, symbol: str) -> int:
         """Lookup product_id for order placement"""

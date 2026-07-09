@@ -89,17 +89,21 @@ async def run_bot_job():
             return
 
         for user in active_users:
-            if not user.api_keys:
-                logger.warning(f"User {user.username} has bot ON but no API keys. Skipping.")
-                continue
+            # No API keys? We will just fall back to DRY RUN alerts!
             try:
-                # Find selected key or default to first
-                db_keys = next((k for k in user.api_keys if getattr(k, "is_selected", False)), None)
-                if not db_keys:
-                    db_keys = user.api_keys[0]
-                    
-                api_key = security.decrypt(db_keys.encrypted_api_key)
-                api_secret = security.decrypt(db_keys.encrypted_api_secret)
+                # Find selected key
+                db_key = next((k for k in user.api_keys if getattr(k, "is_selected", False)), None)
+                if not db_key and len(user.api_keys) > 0:
+                    # If none selected, default to first (legacy fallback)
+                    db_key = user.api_keys[0]
+
+                if db_key:
+                    api_key = security.decrypt(db_key.encrypted_api_key)
+                    api_secret = security.decrypt(db_key.encrypted_api_secret)
+                else:
+                    api_key = None
+                    api_secret = None
+                    logger.info(f"User {user.username} has no active API keys. Running in DRY RUN mode for alerts only.")
 
                 # Use user's personal settings
                 engine = TradingEngine(

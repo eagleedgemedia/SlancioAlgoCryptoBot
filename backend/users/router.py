@@ -134,7 +134,8 @@ async def select_api_key(
     found = False
     for k in keys:
         if k.id == key_id:
-            k.is_selected = True
+            # If already selected, toggle it OFF (fallback to Dry Run)
+            k.is_selected = not k.is_selected
             found = True
         else:
             k.is_selected = False
@@ -143,7 +144,7 @@ async def select_api_key(
         raise HTTPException(status_code=404, detail="API key not found.")
         
     await db.commit()
-    return {"status": "success", "message": "Active API key updated."}
+    return {"status": "success", "message": "API key toggled."}
 
 
 @router.delete("/keys/{key_id}")
@@ -225,13 +226,8 @@ async def toggle_bot(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Start or Pause the trading bot for the user"""
-    # Check if they have API keys before enabling
-    if data.enabled:
-        stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
-        result = await db.execute(stmt)
-        if not result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Cannot enable bot without saving API keys first.")
-            
+    # Allow enabling for Paper Trading / Alert generation even if no keys
+    # Keys will be checked during the engine cycle.
     current_user.bot_enabled = data.enabled
     await db.commit()
     

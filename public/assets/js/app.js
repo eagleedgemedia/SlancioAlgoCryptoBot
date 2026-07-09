@@ -358,7 +358,9 @@ async function loadApiKeys() {
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <div id="margin-${k.id}" class="text-green" style="font-weight: 600; font-size: 0.95rem; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 6px;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
                     <div style="display: flex; gap: 5px;">
-                        ${!k.is_selected ? `<button class="btn btn-sm btn-ghost" onclick="selectApiKey('${k.id}')" title="Set Active"><i class="fa-solid fa-check"></i></button>` : ''}
+                        <button class="btn btn-sm ${k.is_selected ? 'btn-green' : 'btn-ghost'}" onclick="selectApiKey('${k.id}')" title="Toggle API">
+                            ${k.is_selected ? 'ON' : 'OFF'}
+                        </button>
                         <button class="btn btn-sm btn-danger-outline" onclick="deleteApiKey('${k.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
