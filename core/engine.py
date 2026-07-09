@@ -142,8 +142,48 @@ class TradingEngine:
             # D. Track in Memory
             self.position_manager.open_position(order_data, signal)
             
+            # --- Telegram Alert ---
+            trade_type = "🟢 LONG" if signal.is_long else "🔴 SHORT"
+            contract_size = self.position_sizer._get_contract_size(self.symbol)
+            
+            # Financial calculations
+            margin_required = (contracts * contract_size * signal.entry_price) / self.settings.max_leverage
+            sl_amount = (abs(signal.entry_price - signal.stop_loss) * contracts * contract_size)
+            tp_amount = (abs(signal.take_profit - signal.entry_price) * contracts * contract_size)
+            
+            msg = (
+                f"🚨 *NEW TRADE EXECUTED*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📈 Pair: `{self.symbol}`\n"
+                f"🎯 Type: *{trade_type}*\n"
+                f"💰 Entry Price: `{signal.entry_price:.2f}`\n"
+                f"🛑 Stoploss: `{signal.stop_loss:.2f}`\n"
+                f"✅ Target: `{signal.take_profit:.2f}`\n"
+                f"━━━━━━━━━━━━━━━━━━━━━\n"
+                f"💸 Margin Required: `{margin_required:.2f} USDT`\n"
+                f"📉 SL Risk Amount: `-{sl_amount:.2f} USDT`\n"
+                f"📈 Target Reward: `+{tp_amount:.2f} USDT`\n"
+                f"📊 Conditions: `Liquidity Sweep + MTF Trend Alignment`\n"
+            )
+            self._send_telegram_alert(msg)
+            
         except Exception as e:
             logger.error(f"Order Execution Failed: {e}")
+
+    def _send_telegram_alert(self, message: str):
+        if not self.settings.telegram_bot_token or not self.settings.telegram_chat_id:
+            return
+        url = f"https://api.telegram.org/bot{self.settings.telegram_bot_token}/sendMessage"
+        try:
+            import httpx
+            with httpx.Client(timeout=10) as client:
+                client.post(url, json={
+                    "chat_id": self.settings.telegram_chat_id,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                })
+        except Exception as e:
+            logger.warning(f"Telegram alert failed: {e}")
 
     def _execute_exit(self, exit_price: float, reason: str):
         """Close current position"""
@@ -164,6 +204,25 @@ class TradingEngine:
                 pnl = exit_price - active_pos.entry_price
                 
             logger.success(f"🎊 EXIT SUCCESS | Reason: {reason} | PnL: {pnl:.2f} per contract")
+            
+            # --- Telegram Alert ---
+            trade_type = "🔴 SHORT" if active_pos.is_short else "🟢 LONG"
+            contract_size = self.position_sizer._get_contract_size(active_pos.symbol)
+            total_pnl_usdt = pnl * active_pos.size * contract_size
+            
+            emoji = "🤑" if total_pnl_usdt > 0 else "🩸"
+            msg = (
+                f"{emoji} *TRADE CLOSED*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📈 Pair: `{active_pos.symbol}`\n"
+                f"🎯 Type: *{trade_type}*\n"
+                f"💰 Entry: `{active_pos.entry_price:.2f}`\n"
+                f"🏁 Exit: `{exit_price:.2f}`\n"
+                f"🔔 Reason: `{reason}`\n"
+                f"━━━━━━━━━━━━━━━━━━━━━\n"
+                f"💵 Realized PnL: `{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt:.2f} USDT`\n"
+            )
+            self._send_telegram_alert(msg)
             
         except Exception as e:
             logger.error(f"Failed to close position: {e}")
