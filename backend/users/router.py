@@ -122,7 +122,7 @@ async def save_api_keys(
 
 @router.post("/keys/{key_id}/select")
 async def select_api_key(
-    key_id: int,
+    key_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -148,7 +148,7 @@ async def select_api_key(
 
 @router.delete("/keys/{key_id}")
 async def delete_api_key(
-    key_id: int,
+    key_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -177,7 +177,7 @@ async def delete_api_key(
 
 @router.get("/keys/{key_id}/balance")
 async def get_key_balance(
-    key_id: int,
+    key_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
