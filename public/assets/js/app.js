@@ -434,6 +434,30 @@ async function loadStats() {
         document.getElementById('stat-pnl').className = stats.total_pnl < 0 ? 'text-danger' : 'text-gradient';
         document.getElementById('stat-trades').innerText = stats.total_trades;
     } catch(e) {}
+    
+    // Also load active trade for the dashboard
+    loadActiveTrade();
+}
+
+async function loadActiveTrade() {
+    try {
+        const trades = await fetchAPI('/users/trades');
+        const activeTrade = trades.find(t => t.status === 'OPEN' || t.status === 'open');
+        const card = document.getElementById('active-trade-card');
+        
+        if (activeTrade) {
+            document.getElementById('active-trade-pair').innerText = activeTrade.symbol;
+            document.getElementById('active-trade-type').innerText = activeTrade.side.toUpperCase();
+            document.getElementById('active-trade-type').className = (activeTrade.side === 'buy' || activeTrade.side === 'long') ? 'text-green' : 'text-danger';
+            document.getElementById('active-trade-entry').innerText = `$${activeTrade.entry_price.toFixed(2)}`;
+            document.getElementById('active-trade-target').innerText = activeTrade.pnl_usdt != null ? `$${activeTrade.pnl_usdt.toFixed(2)}` : 'Tracking...';
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    } catch (e) {
+        document.getElementById('active-trade-card').style.display = 'none';
+    }
 }
 
 // ─── TRADE HISTORY ───
