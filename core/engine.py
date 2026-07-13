@@ -26,7 +26,8 @@ class TradingEngine:
         api_secret: str = None, 
         user_id: str = None,
         stop_loss_points: float = 400.0,
-        ema_distance_points: int = 200
+        ema_distance_points: int = 200,
+        telegram_chat_id: str = None
     ):
         self.settings = get_settings()
         self.symbol = self.settings.trading_symbol
@@ -42,6 +43,7 @@ class TradingEngine:
         self.position_sizer = PositionSizer(client=self.client)
         self.order_manager = OrderManager(client=self.client, is_dry_run=self.is_dry_run)
         self.position_manager = PositionManager()
+        self.telegram_chat_id = telegram_chat_id or self.settings.telegram_chat_id
         
         mode = 'DRY RUN' if self.is_dry_run else 'LIVE'
         logger.info(f"⚙️ Engine Initialized | User: {user_id} | Symbol: {self.symbol} | Mode: {mode}")
@@ -50,6 +52,7 @@ class TradingEngine:
         """
         The main tick function. Called every time a new candle closes.
         """
+        events = []
         logger.info(f"\n{'=' * 50}\n🚀 STARTING CANDLE CYCLE ({self.symbol} {self.resolution})\n{'=' * 50}")
         
         # 1. Fetch Latest Data
@@ -60,7 +63,7 @@ class TradingEngine:
         )
         if df.empty:
             logger.error("No data fetched, skipping cycle.")
-            return
+            return events
 
         # 2. Prepare Strategy Indicators
         df = prepare_strategy_dataframe(df, ema_period=self.settings.ema_period)
@@ -78,16 +81,20 @@ class TradingEngine:
             
             # Check TP
             if self.position_manager.check_take_profit(live_price, latest_ema_low):
-                self._execute_exit(live_price, "TP Hit")
-                return # Exit cycle, don't enter new trade immediately
+                res = self._execute_exit(live_price, "TP Hit")
+                if res:
+                    events.append({"type": "close", "pnl": res[0], "reason": res[1], "exit_price": res[2]})
+                return events
                 
             # Check SL (Fallback for Dry Run)
             if self.settings.dry_run and self.position_manager.check_stop_loss(live_price):
-                self._execute_exit(live_price, "SL Hit")
-                return
+                res = self._execute_exit(live_price, "SL Hit")
+                if res:
+                    events.append({"type": "close", "pnl": res[0], "reason": res[1], "exit_price": res[2]})
+                return events
                 
             logger.info("⏳ Position remains open. Waiting for exit conditions.")
-            return  # If we have an active trade, we don't look for new entries (Condition #6)
+            return events  # If we have an active trade, we don't look for new entries (Condition #6)
 
         # 4. Signal Evaluation (Look for new entries)
         logger.info("🔍 Scanning for new setups...")
@@ -97,9 +104,13 @@ class TradingEngine:
         )
         
         if signal:
-            self._execute_entry(signal)
+            order_data = self._execute_entry(signal)
+            if order_data:
+                events.append({"type": "open", "order_data": order_data, "signal": signal})
         else:
             logger.info("⏸️ No valid setup found on this candle.")
+            
+        return events
 
     def _execute_entry(self, signal):
         """Handle position sizing and order placement for a new signal"""
@@ -167,19 +178,21 @@ class TradingEngine:
                 f"📊 Conditions: `Liquidity Sweep + MTF Trend Alignment`\n"
             )
             self._send_telegram_alert(msg)
+            return order_data
             
         except Exception as e:
             logger.error(f"Order Execution Failed: {e}")
+            return None
 
     def _send_telegram_alert(self, message: str):
-        if not self.settings.telegram_bot_token or not self.settings.telegram_chat_id:
+        if not self.settings.telegram_bot_token or not self.telegram_chat_id:
             return
         url = f"https://api.telegram.org/bot{self.settings.telegram_bot_token}/sendMessage"
         try:
             import httpx
             with httpx.Client(timeout=10) as client:
                 client.post(url, json={
-                    "chat_id": self.settings.telegram_chat_id,
+                    "chat_id": self.telegram_chat_id,
                     "text": message,
                     "parse_mode": "Markdown"
                 })
@@ -224,6 +237,8 @@ class TradingEngine:
                 f"💵 Realized PnL: `{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt:.2f} USDT` (₹{'=' if total_pnl_usdt==0 else '+' if total_pnl_usdt>0 else ''}{total_pnl_usdt * 89.0:,.2f})\n"
             )
             self._send_telegram_alert(msg)
+            return pnl, reason, exit_price
             
         except Exception as e:
             logger.error(f"Failed to close position: {e}")
+            return None

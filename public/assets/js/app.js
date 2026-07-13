@@ -558,9 +558,9 @@ async function loadAdminUsers() {
             const lev = u.max_leverage || 10;
             const tf = u.trading_timeframe || '1h';
             const margin = u.margin_type || 'isolated';
-            const sl = u.stop_loss_points || 400;
+            const sl = u.stop_loss_points || 600;
             const tp = u.take_profit_points || 800;
-            const entryDist = u.ema_distance_points ?? 200;
+            const entryDist = u.ema_distance_points ?? 400;
             row.innerHTML = `
                 <td><strong>${u.username}</strong></td>
                 <td class="text-muted">${u.email}</td>

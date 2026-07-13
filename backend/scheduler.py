@@ -16,8 +16,9 @@ from sqlalchemy.orm import selectinload
 
 from database.connection import AsyncSessionLocal
 from core.security import security
-from database.models import User, ApiKey
+from database.models import User, ApiKey, TradeLog
 from core.engine import TradingEngine
+from core.exchange.position_manager import ActivePosition
 from core.config import get_settings
 
 settings = get_settings()
@@ -80,7 +81,10 @@ async def run_bot_job():
         stmt = select(User).where(
             (User.bot_enabled == True) &
             (User.is_active == True)
-        ).options(selectinload(User.api_keys))
+        ).options(
+            selectinload(User.api_keys),
+            selectinload(User.settings)
+        )
         result = await session.execute(stmt)
         active_users = result.scalars().all()
 
@@ -105,16 +109,71 @@ async def run_bot_job():
                     api_secret = None
                     logger.info(f"User {user.username} has no active API keys. Running in DRY RUN mode for alerts only.")
 
+                user_telegram_chat_id = user.settings.telegram_chat_id if user.settings else None
+                
+                # Get open trade log
+                stmt_open = select(TradeLog).where(
+                    TradeLog.user_id == user.id,
+                    TradeLog.status == "open"
+                )
+                result_open = await session.execute(stmt_open)
+                open_trade = result_open.scalar_one_or_none()
+
                 # Use user's personal settings
                 engine = TradingEngine(
                     api_key=api_key,
                     api_secret=api_secret,
                     user_id=user.id,
                     stop_loss_points=user.stop_loss_points,
-                    ema_distance_points=getattr(user, "ema_distance_points", 200)
+                    ema_distance_points=getattr(user, "ema_distance_points", 200),
+                    telegram_chat_id=user_telegram_chat_id
                 )
+                
+                # Hydrate position manager
+                if open_trade:
+                    engine.position_manager.active_position = ActivePosition(
+                        symbol=open_trade.symbol,
+                        side=open_trade.side,
+                        size=open_trade.quantity,
+                        entry_price=open_trade.entry_price,
+                        stop_loss=open_trade.stop_loss,
+                        take_profit_target=open_trade.take_profit_target,
+                        mode="live_open" if api_key else "virtual_open"
+                    )
+
                 logger.info(f"🚀 Running engine for user: {user.username}")
-                await asyncio.to_thread(engine.run_candle_cycle)
+                events = await asyncio.to_thread(engine.run_candle_cycle)
+                
+                # Process events to update DB
+                if events:
+                    for ev in events:
+                        if ev["type"] == "open":
+                            t = ev["order_data"]
+                            sig = ev["signal"]
+                            new_log = TradeLog(
+                                user_id=user.id,
+                                symbol=t["symbol"],
+                                side=t["side"],
+                                status="open",
+                                entry_price=sig.entry_price,
+                                stop_loss=sig.stop_loss,
+                                take_profit_target=sig.take_profit_target,
+                                quantity=t["size"],
+                                leverage=user.max_leverage,
+                                entry_order_id=t.get("id")
+                            )
+                            session.add(new_log)
+                            await session.commit()
+                            
+                        elif ev["type"] == "close":
+                            if open_trade:
+                                open_trade.status = "closed"
+                                open_trade.exit_price = ev["exit_price"]
+                                open_trade.pnl_usdt = ev["pnl"]
+                                open_trade.closed_at = datetime.now(timezone.utc)
+                                await session.commit()
+                                # After a close event, if there are more events they would be a new open, open_trade needs to be re-queried or set to None
+                                open_trade = None
 
             except Exception as e:
                 logger.error(f"❌ Engine error for {user.username}: {e}")

@@ -60,7 +60,7 @@ class Settings(BaseSettings):
         description="Max position size as fraction of capital (0.02 = 2%)"
     )
     stop_loss_points: float = Field(
-        default=400.0, ge=50, le=2000,
+        default=600.0, ge=50, le=2000,
         description="Stop loss distance in points from entry"
     )
     dry_run: bool = Field(
@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # ── EMA Strategy Parameters ──
     ema_period: int = Field(default=7, ge=2, le=50, description="EMA period for High/Low")
     min_distance_from_ema_low: float = Field(
-        default=200.0, ge=50,
+        default=400.0, ge=50,
         description="Minimum points Close must be above EMA 7 Low"
     )
 

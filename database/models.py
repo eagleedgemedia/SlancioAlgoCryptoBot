@@ -37,11 +37,11 @@ class User(Base):
     # Position Sizing & Risk Settings (per-user override)
     position_size_pct: Mapped[float] = mapped_column(Float, default=0.02)   # 2% default
     max_leverage: Mapped[int] = mapped_column(Integer, default=10)
-    stop_loss_points: Mapped[float] = mapped_column(Float, default=400.0)
+    stop_loss_points: Mapped[float] = mapped_column(Float, default=600.0)
     take_profit_points: Mapped[float] = mapped_column(Float, default=800.0)  # 2:1 R:R default
     margin_type: Mapped[str] = mapped_column(String, default="isolated")    # 'isolated' or 'cross'
     trading_timeframe: Mapped[str] = mapped_column(String, default="1h")     # '1m','5m','15m','1h','4h'
-    ema_distance_points: Mapped[int] = mapped_column(Integer, default=200)   # Entry condition: points above EMA 7 Low
+    ema_distance_points: Mapped[int] = mapped_column(Integer, default=400)   # Entry condition: points above EMA 7 Low
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
