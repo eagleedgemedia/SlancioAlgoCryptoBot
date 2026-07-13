@@ -77,19 +77,19 @@ class Settings(BaseSettings):
 
     # ── Database ──
     database_url: str = Field(
-        default="sqlite+aiosqlite:///./ksl_crypto_bot.db",
+        default="postgresql+asyncpg://neondb_owner:npg_9Yn2OWpAegBw@ep-fragrant-sky-aogk3l4j.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require",
         description="Database connection URL"
     )
 
     # ── Security ──
-    encryption_key: str = Field(default="", description="Fernet key for API key encryption")
-    jwt_secret_key: str = Field(default="change-me-in-production", description="JWT signing secret")
+    encryption_key: str = Field(default="Hd5ngo0dIhZip2Br04AVOqkMoQw7k1jjDlchAhwbaOQ=", description="Fernet key for API key encryption")
+    jwt_secret_key: str = Field(default="Hd5ngo0dIhZip2Br04AVOqkMoQw7k1jjDlchAhwbaOQ=", description="JWT signing secret")
     jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
     jwt_expiry_minutes: int = Field(default=1440, description="JWT token expiry in minutes")
 
     # ── Telegram ──
-    telegram_bot_token: str = Field(default="", description="Telegram Bot API token")
-    telegram_chat_id: str = Field(default="", description="Default Telegram chat ID for alerts")
+    telegram_bot_token: str = Field(default="8973560314:AAEpQWBP-gc2mex03qg8d_JQYL9RAZ5D6pU", description="Telegram Bot API token")
+    telegram_chat_id: str = Field(default="8044668960", description="Default Telegram chat ID for alerts")
 
     # ── Application ──
     app_env: AppEnvironment = Field(default=AppEnvironment.DEVELOPMENT)
