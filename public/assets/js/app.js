@@ -661,6 +661,11 @@ function closeAdminConfigModal() {
 async function submitAdminConfig(e) {
     e.preventDefault();
     const userId = document.getElementById('ac-userid').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const origHtml = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving...';
+    btn.disabled = true;
     
     try {
         const resp = await fetchAPI(`/admin/users/${userId}/trading-config`, {
@@ -674,11 +679,14 @@ async function submitAdminConfig(e) {
                 ema_distance_points: parseInt(document.getElementById('ac-entry-dist').value),
             })
         });
-        showToast(`Config saved successfully! Delta Status: ${resp.delta_exchange_status}`);
+        showToast(`Config saved successfully!`);
         closeAdminConfigModal();
         loadAdminUsers();
     } catch(err) {
         // fetchAPI already handles showing error toasts
+    } finally {
+        btn.innerHTML = origHtml;
+        btn.disabled = false;
     }
 }
 
