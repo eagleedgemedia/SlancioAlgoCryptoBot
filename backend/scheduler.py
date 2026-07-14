@@ -185,13 +185,13 @@ def start_scheduler():
     if scheduler.running:
         return
 
-    # 1. Main trading cycle — every hour at :00:05
+    # 1. Main trading cycle — every 1 minute
     scheduler.add_job(
         run_bot_job, 'cron',
-        minute=0, second=5,
-        id='hourly_bot_cycle',
-        name='Hourly Trading Cycle',
-        misfire_grace_time=60
+        minute='*', second=5,
+        id='minute_bot_cycle',
+        name='Minute Trading Cycle',
+        misfire_grace_time=30
     )
 
     # 2. Keep-alive self-ping — every 5 minutes
